@@ -2,7 +2,7 @@
 
 All notable changes to Ooshak are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.1.2] - 2026-11-11
 
 ### Fixed
 
@@ -35,5 +35,6 @@ First public preview.
 - First-run model download with pinned revisions and SHA-256 checks.
 - Per-user Windows installer.
 
+[0.1.2]: https://github.com/Milvasoft/ooshak/releases/tag/v0.1.2
 [0.1.1]: https://github.com/Milvasoft/ooshak/releases/tag/v0.1.1
 [0.1.0]: https://github.com/Milvasoft/ooshak/releases/tag/v0.1.0
