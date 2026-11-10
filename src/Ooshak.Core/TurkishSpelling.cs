@@ -141,7 +141,8 @@ public static partial class TurkishSpelling
     {
         var sounds = new Dictionary<string, string>(StringComparer.Ordinal);
 
-        foreach (var line in ReadResource(SoundsResource).Split('\n', StringSplitOptions.RemoveEmptyEntries))
+        // Git may check the file out with CRLF endings; a stray '\r' would end up as a sound.
+        foreach (var line in ReadResource(SoundsResource).Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries))
         {
             var space = line.IndexOf(' ');
             if (line[0] != ';' && space > 0)
