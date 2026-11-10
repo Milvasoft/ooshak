@@ -39,9 +39,11 @@ jobs:
       - name: Write checksums
         shell: pwsh
         run: |
-          Get-ChildItem artifacts -Filter *.exe | ForEach-Object {
+          # LF endings so that `sha256sum -c` works on Linux and in Git Bash.
+          $lines = Get-ChildItem artifacts -Filter *.exe | ForEach-Object {
             "$((Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower())  $($_.Name)"
-          } | Set-Content artifacts/SHA256SUMS.txt -Encoding ascii
+          }
+          [IO.File]::WriteAllText("$PWD/artifacts/SHA256SUMS.txt", (($lines -join "`n") + "`n"))
 
       # Versions below 1.0 and versions with a suffix such as -beta are marked as pre-releases.
       - name: Create release
