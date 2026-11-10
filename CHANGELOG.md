@@ -2,6 +2,13 @@
 
 All notable changes to Ooshak are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+
+- A reply could start while you were still talking when the system was busy. The wait now checks for speech after every pause.
+- Release checksums use LF line endings, so `sha256sum -c SHA256SUMS.txt` works.
+
 ## [0.1.1] - 2026-11-11
 
 ### Fixed

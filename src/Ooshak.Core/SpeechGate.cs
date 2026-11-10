@@ -18,10 +18,13 @@ public static class SpeechGate
         var total = Stopwatch.StartNew();
         var calm = Stopwatch.StartNew();
 
-        while (total.Elapsed < maxWait && calm.Elapsed < quiet)
+        // The hold is checked right after every wake-up: a slow timer must not count talking as quiet.
+        while (total.Elapsed < maxWait)
         {
             if (hold())
                 calm.Restart();
+            else if (calm.Elapsed >= quiet)
+                return;
 
             await Task.Delay(Poll, cancellationToken);
         }

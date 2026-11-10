@@ -26,6 +26,22 @@ public class SpeechGateTests
     }
 
     [Fact]
+    public async Task A_slow_timer_does_not_count_talking_as_quiet()
+    {
+        var talking = true;
+        var watch = Stopwatch.StartNew();
+
+        // Speech is still going on when the first wake-up comes late.
+        var wait = SpeechGate.WaitAsync(() => talking, TimeSpan.FromMilliseconds(10), TimeSpan.FromSeconds(5), default);
+        await Task.Delay(200);
+        Assert.False(wait.IsCompleted);
+
+        talking = false;
+        await wait;
+        Assert.True(watch.ElapsedMilliseconds >= 200);
+    }
+
+    [Fact]
     public async Task Endless_noise_cannot_hold_the_reply_forever()
     {
         var watch = Stopwatch.StartNew();
