@@ -1,0 +1,54 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Read version from tag
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}".TrimStart('v')
+          "VERSION=$version" >> $env:GITHUB_ENV
+
+      - name: Test
+        run: dotnet test --configuration Release
+
+      - name: Publish
+        run: dotnet publish src/Ooshak/Ooshak.csproj -c Release -r win-x64 --self-contained true -o artifacts/publish -p:Version=${{ env.VERSION }}
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          choco install innosetup --no-progress -y
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" /Q "/DAppVersion=$env:VERSION" "/DSourceDir=..\artifacts\publish" installer\Ooshak.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Write checksums
+        shell: pwsh
+        run: |
+          Get-ChildItem artifacts -Filter *.exe | ForEach-Object {
+            "$((Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower())  $($_.Name)"
+          } | Set-Content artifacts/SHA256SUMS.txt -Encoding ascii
+
+      # Versions below 1.0 and versions with a suffix such as -beta are marked as pre-releases.
+      - name: Create release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $prerelease = if ($env:VERSION -like '0.*' -or $env:VERSION -like '*-*') { '--prerelease' } else { '' }
+          gh release create "${{ github.ref_name }}" artifacts/Ooshak-Setup-*.exe artifacts/SHA256SUMS.txt `
+            --title "Ooshak $env:VERSION" --generate-notes $prerelease

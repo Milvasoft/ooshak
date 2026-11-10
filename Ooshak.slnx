@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Ooshak.Cli/Ooshak.Cli.csproj" />
+    <Project Path="src/Ooshak.Core/Ooshak.Core.csproj" />
+    <Project Path="src/Ooshak/Ooshak.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Ooshak.Tests/Ooshak.Tests.csproj" />
+  </Folder>
+</Solution>

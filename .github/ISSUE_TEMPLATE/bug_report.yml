@@ -1,0 +1,45 @@
+name: Bug report
+description: Something does not work as expected.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you say or do, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Say "Ooshak, tell Atlas to run the tests"
+        2. ...
+  - type: input
+    id: version
+    attributes:
+      label: Ooshak version
+      placeholder: 0.1.0
+    validations:
+      required: true
+  - type: dropdown
+    id: language
+    attributes:
+      label: Language setting
+      options: [Turkish, English]
+  - type: input
+    id: environment
+    attributes:
+      label: Windows version, GPU and microphone
+      placeholder: Windows 11 24H2, RTX 4070, USB headset
+  - type: input
+    id: claude
+    attributes:
+      label: Claude desktop app version
+  - type: textarea
+    id: log
+    attributes:
+      label: Log
+      description: Relevant lines from %USERPROFILE%\.ooshak\ooshak.log. Remove private session names first.
+      render: text

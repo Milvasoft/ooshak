@@ -1,0 +1,11 @@
+<Project>
+  <PropertyGroup>
+    <Version>0.1.0</Version>
+    <Product>Ooshak</Product>
+    <Company>Milvasoft</Company>
+    <Authors>Milvasoft</Authors>
+    <Copyright>Copyright © 2026 Milvasoft</Copyright>
+    <RepositoryUrl>https://github.com/Milvasoft/ooshak</RepositoryUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,94 @@
+<Window x:Class="Ooshak.PermissionWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:Ooshak"
+        Title="Ooshak Permission"
+        Width="470" SizeToContent="Height"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        ResizeMode="NoResize" ShowInTaskbar="False" Topmost="True" ShowActivated="False"
+        ThemeMode="None">
+    <Window.Resources>
+        <Style x:Key="PillBase" TargetType="Button">
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="IsTabStop" Value="False" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FontFamily" Value="{StaticResource UiFont}" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Height" Value="38" />
+            <Setter Property="Padding" Value="18,0" />
+        </Style>
+        <Style x:Key="DenyPill" TargetType="Button" BasedOn="{StaticResource PillBase}">
+            <Setter Property="Foreground" Value="{StaticResource Paper}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Root" CornerRadius="19" Background="Transparent" BorderBrush="{StaticResource Ink600}" BorderThickness="1" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="{StaticResource Ink600}" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Root" Property="Opacity" Value="0.45" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="AllowPill" TargetType="Button" BasedOn="{StaticResource PillBase}">
+            <Setter Property="Foreground" Value="#17130E" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Root" CornerRadius="19" Background="{StaticResource Paper}" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="#FFFFFF" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Root" Property="Opacity" Value="0.45" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Border Margin="14" CornerRadius="16" Background="#F7171410" BorderBrush="#33F4EEE3" BorderThickness="1" Padding="22,20,22,18">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="22" ShadowDepth="5" Opacity="0.55" Color="Black" />
+        </Border.Effect>
+        <StackPanel>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Ellipse Width="9" Height="9" Fill="{StaticResource Brass}" VerticalAlignment="Center" />
+                <TextBlock x:Name="TitleText" Grid.Column="1" Margin="10,0,8,1" VerticalAlignment="Center"
+                           FontFamily="{StaticResource DisplayFont}" FontSize="19" FontWeight="SemiBold"
+                           Foreground="{StaticResource Paper}" TextTrimming="CharacterEllipsis" />
+                <TextBlock x:Name="WaitingText" Grid.Column="2" VerticalAlignment="Center" Style="{StaticResource Eyebrow}" />
+            </Grid>
+
+            <Border Margin="0,14,0,16" Padding="12,10" CornerRadius="9" Background="#0F0D0A">
+                <ScrollViewer MaxHeight="150" VerticalScrollBarVisibility="Auto" Focusable="False">
+                    <TextBlock x:Name="DetailText" FontFamily="{StaticResource MonoFont}" FontSize="13"
+                               Foreground="{StaticResource Paper}" TextWrapping="Wrap" />
+                </ScrollViewer>
+            </Border>
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button x:Name="DenyButton" Style="{StaticResource DenyPill}" Content="{local:T 'Reddet'}" Click="OnDeny" />
+                <Button x:Name="AllowButton" Style="{StaticResource AllowPill}" Margin="8,0,0,0" Content="{local:T 'İzin ver'}" Click="OnAllow" />
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</Window>
