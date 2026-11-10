@@ -66,7 +66,7 @@ public sealed class AppController : IDisposable
 
         _main = new MainWindow(this);
         _island = new IslandWindow(this);
-        _permissionWindow = new PermissionWindow(Config, Permissions);
+        _permissionWindow = new PermissionWindow(Permissions);
         NeedsSetup = ModelCatalog.Missing(OoshakConfig.ModelsDir).Count > 0;
 
         // Started hidden at login before setup was finished, the window is the only way forward.
@@ -174,7 +174,7 @@ public sealed class AppController : IDisposable
         _main = new MainWindow(this);
         _island = new IslandWindow(this);
         _permissionWindow?.Retire();
-        _permissionWindow = new PermissionWindow(Config, Permissions);
+        _permissionWindow = new PermissionWindow(Permissions);
         oldMain?.Retire();
         oldIsland?.Close();
         ShowMain();

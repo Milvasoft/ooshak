@@ -2,6 +2,15 @@
 
 All notable changes to Ooshak are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.1.1] - 2026-11-11
+
+### Fixed
+
+- The permission popup now appears while a game or video is full screen. Only listening and reading pause.
+- The permission popup opens on the screen with the Claude window, and moves to another screen when that one is taken by a full-screen app.
+- Failed message deliveries now log the exact reason.
+- Pronunciation data is read correctly when the repository is checked out with CRLF line endings.
+
 ## [0.1.0] - 2026-11-10
 
 First public preview.
@@ -19,4 +28,5 @@ First public preview.
 - First-run model download with pinned revisions and SHA-256 checks.
 - Per-user Windows installer.
 
+[0.1.1]: https://github.com/Milvasoft/ooshak/releases/tag/v0.1.1
 [0.1.0]: https://github.com/Milvasoft/ooshak/releases/tag/v0.1.0

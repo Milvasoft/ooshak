@@ -314,7 +314,7 @@ public sealed class VoiceLoop : IDisposable
             _working = false;
         }
 
-        _log.Add($"{Describe(status)} · {send.Title} · {send.Text}");
+        _log.Add($"{Describe(status)} ({status}) · {send.Title} · {send.Text}");
 
         if (status != DeliveryStatus.Sent && session is not null)
             _instructed.TryRemove(session.CliSessionId, out _);
@@ -349,7 +349,7 @@ public sealed class VoiceLoop : IDisposable
         var sessionId = payload.TryGetProperty("session_id", out var id) ? id.GetString() ?? "" : "";
         var title = SessionCatalog.Load().FirstOrDefault(s => s.CliSessionId == sessionId)?.Title;
 
-        if (!_config.PermissionPopup || _autoPaused || title is null || PermissionText.NeedsTheApp(tool))
+        if (!_config.PermissionPopup || title is null || PermissionText.NeedsTheApp(tool))
             return null;
 
         var input = payload.TryGetProperty("tool_input", out var value) ? value : default;

@@ -1,6 +1,10 @@
+using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Interop;
 using System.Windows.Threading;
 using Ooshak.Core;
+using Forms = System.Windows.Forms;
 
 namespace Ooshak;
 
@@ -10,22 +14,21 @@ namespace Ooshak;
 /// </summary>
 public partial class PermissionWindow : Window
 {
-    private const double TopMargin = 56;
-    private const double EdgeMargin = 8;
-    private const double EstimatedHeight = 300;
+    private const int TopMarginPixels = 64;
+    private const int SwpNoSize = 0x0001;
+    private const int SwpNoActivate = 0x0010;
+    private static readonly IntPtr HwndTopmost = new(-1);
 
     // A popup appearing under a moving mouse must not catch a click meant for something else.
     private static readonly TimeSpan ArmDelay = TimeSpan.FromMilliseconds(500);
 
-    private readonly OoshakConfig _config;
     private readonly PermissionBroker _broker;
     private readonly DispatcherTimer _armTimer = new() { Interval = ArmDelay };
     private PermissionRequest? _shown;
 
-    public PermissionWindow(OoshakConfig config, PermissionBroker broker)
+    public PermissionWindow(PermissionBroker broker)
     {
         InitializeComponent();
-        _config = config;
         _broker = broker;
 
         SourceInitialized += (_, _) => IslandWindow.MakeNonActivating(this);
@@ -67,8 +70,10 @@ public partial class PermissionWindow : Window
         _armTimer.Stop();
         _armTimer.Start();
 
-        PlaceOnScreen();
         Show();
+
+        // Placed once the size is known, in device pixels, so monitors with other scalings work too.
+        Dispatcher.BeginInvoke(PlaceOnScreen, DispatcherPriority.Loaded);
     }
 
     private void Arm(bool enabled)
@@ -80,13 +85,28 @@ public partial class PermissionWindow : Window
 
     private void PlaceOnScreen()
     {
-        var work = SystemParameters.WorkArea;
-        var centered = work.Left + (work.Width - Width) / 2;
+        var handle = new WindowInteropHelper(this).Handle;
+        if (handle == IntPtr.Zero || !GetWindowRect(handle, out var bounds))
+            return;
 
-        Left = _config.IslandLeft is { } left ? Math.Clamp(left, work.Left, work.Right - Width) : centered;
-        Top = _config.IslandTop is { } top
-            ? Math.Clamp(top + TopMargin + EdgeMargin * 3, work.Top + EdgeMargin, work.Bottom - EstimatedHeight)
-            : work.Top + TopMargin;
+        var area = TargetScreen().WorkingArea;
+        var width = bounds.Right - bounds.Left;
+        SetWindowPos(handle, HwndTopmost, area.X + (area.Width - width) / 2, area.Y + TopMarginPixels, 0, 0, SwpNoSize | SwpNoActivate);
+    }
+
+    // Approvals are expected where the Claude window is. A screen taken by a full-screen game or
+    // video is skipped, because a popup there would sit behind it or interrupt it.
+    private static Forms.Screen TargetScreen()
+    {
+        var busy = FullscreenDetector.IsActive() ? Forms.Screen.FromHandle(GetForegroundWindow()) : null;
+        var claude = Process.GetProcessesByName("claude")
+            .FirstOrDefault(p => p.MainWindowHandle != IntPtr.Zero && p.MainWindowTitle == "Claude");
+        var preferred = claude is null ? Forms.Screen.PrimaryScreen! : Forms.Screen.FromHandle(claude.MainWindowHandle);
+
+        if (busy is null || preferred.DeviceName != busy.DeviceName)
+            return preferred;
+
+        return Forms.Screen.AllScreens.FirstOrDefault(s => s.DeviceName != busy.DeviceName) ?? preferred;
     }
 
     private void OnAllow(object sender, RoutedEventArgs e) => Answer(true);
@@ -98,4 +118,24 @@ public partial class PermissionWindow : Window
         if (_shown is { } request)
             _broker.Decide(request, allow);
     }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct Rect
+    {
+        public int Left;
+        public int Top;
+        public int Right;
+        public int Bottom;
+    }
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetForegroundWindow();
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetWindowRect(IntPtr window, out Rect bounds);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SetWindowPos(IntPtr window, IntPtr after, int x, int y, int width, int height, int flags);
 }
