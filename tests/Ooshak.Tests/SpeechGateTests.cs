@@ -20,7 +20,9 @@ public class SpeechGateTests
     {
         var watch = Stopwatch.StartNew();
         await SpeechGate.WaitAsync(() => watch.ElapsedMilliseconds < 300, Quiet, TimeSpan.FromSeconds(5), default);
-        Assert.True(watch.ElapsedMilliseconds >= 400);
+
+        // The gate polls every 25 ms, so the last "still talking" sample can come up to one poll before 300 ms.
+        Assert.InRange(watch.ElapsedMilliseconds, 360, 3000);
     }
 
     [Fact]
