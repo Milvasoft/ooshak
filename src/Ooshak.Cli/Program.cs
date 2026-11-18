@@ -22,6 +22,9 @@ switch (args.FirstOrDefault())
         Console.WriteLine($"cleared={claude.ClearIfEquals(args[1])}");
         return 0;
     }
+    case "fullscreen":
+        Console.WriteLine($"fullscreen={FullscreenDetector.IsActive()}");
+        return 0;
     case "download-models":
     {
         var missing = ModelCatalog.Missing(OoshakConfig.ModelsDir);

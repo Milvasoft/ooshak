@@ -10,6 +10,8 @@ public static class FullscreenDetector
     private const int MonitorDefaultToNearest = 2;
     private const int StateD3dFullscreen = 3;
     private const int StatePresentation = 5;
+    private const int GwlStyle = -16;
+    private const int WsCaption = 0x00C00000;
 
     private static readonly HashSet<string> ShellClasses = ["Progman", "WorkerW", "Shell_TrayWnd", "Shell_SecondaryTrayWnd"];
     private static readonly HashSet<string> WorkApps = ["claude", "ooshak"];
@@ -24,9 +26,19 @@ public static class FullscreenDetector
             return false;
 
         var monitor = new MonitorInfo { Size = Marshal.SizeOf<MonitorInfo>() };
-        return GetMonitorInfoW(MonitorFromWindow(window, MonitorDefaultToNearest), ref monitor)
-            && Covers(bounds.ToTuple(), monitor.Bounds.ToTuple());
+        if (!GetMonitorInfoW(MonitorFromWindow(window, MonitorDefaultToNearest), ref monitor))
+            return false;
+
+        var style = GetWindowLongW(window, GwlStyle);
+        return LooksFullscreen(Covers(bounds.ToTuple(), monitor.Bounds.ToTuple()), IsZoomed(window), (style & WsCaption) == WsCaption);
     }
+
+    /// <summary>
+    /// With an auto-hiding taskbar a maximized window covers the whole monitor too, so covering
+    /// alone is not enough: games and full-screen video are neither maximized nor have a title bar.
+    /// </summary>
+    public static bool LooksFullscreen(bool coversMonitor, bool maximized, bool hasTitleBar) =>
+        coversMonitor && !maximized && !hasTitleBar;
 
     /// <summary>True when the window reaches every monitor edge. A maximized window stops at the taskbar.</summary>
     public static bool Covers((int Left, int Top, int Right, int Bottom) window, (int Left, int Top, int Right, int Bottom) monitor) =>
@@ -72,6 +84,13 @@ public static class FullscreenDetector
 
     [DllImport("user32.dll")]
     private static extern IntPtr GetForegroundWindow();
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool IsZoomed(IntPtr window);
+
+    [DllImport("user32.dll")]
+    private static extern int GetWindowLongW(IntPtr window, int index);
 
     [DllImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]

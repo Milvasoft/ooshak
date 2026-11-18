@@ -19,6 +19,22 @@ public class FullscreenDetectorTests
         Assert.False(FullscreenDetector.Covers((0, 0, 1920, 1032), Monitor));
 
     [Fact]
+    public void A_maximized_window_covering_an_auto_hidden_taskbar_is_not_full_screen() =>
+        Assert.False(FullscreenDetector.LooksFullscreen(coversMonitor: true, maximized: true, hasTitleBar: true));
+
+    [Fact]
+    public void A_covering_window_with_a_title_bar_is_not_full_screen() =>
+        Assert.False(FullscreenDetector.LooksFullscreen(coversMonitor: true, maximized: false, hasTitleBar: true));
+
+    [Fact]
+    public void A_borderless_covering_window_is_full_screen() =>
+        Assert.True(FullscreenDetector.LooksFullscreen(coversMonitor: true, maximized: false, hasTitleBar: false));
+
+    [Fact]
+    public void A_borderless_window_that_does_not_cover_is_not_full_screen() =>
+        Assert.False(FullscreenDetector.LooksFullscreen(coversMonitor: false, maximized: false, hasTitleBar: false));
+
+    [Fact]
     public void A_small_window_does_not_count() =>
         Assert.False(FullscreenDetector.Covers((100, 100, 900, 700), Monitor));
 }
