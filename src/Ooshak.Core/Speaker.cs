@@ -1,13 +1,8 @@
-﻿using System.Diagnostics;
-using System.Globalization;
-using System.Text;
-using System.Text.Json;
-using System.Threading.Channels;
-using NAudio.Wave;
+﻿using System.Threading.Channels;
 
 namespace Ooshak.Core;
 
-/// <summary>Speaks queued sentences one at a time through a local Piper voice.</summary>
+/// <summary>Speaks queued sentences one at a time through a local voice.</summary>
 public sealed class Speaker : IDisposable
 {
     private const int BeepRate = 22050;
@@ -24,26 +19,19 @@ public sealed class Speaker : IDisposable
     public const double MinRate = 0.6;
     public const double MaxRate = 2.0;
 
-    private readonly string _piperExe;
-    private readonly string _voicePath;
-    private readonly int _sampleRate;
+    private readonly ISpeechVoice _voice;
     private readonly Channel<(string Text, double Rate)> _queue = Channel.CreateUnbounded<(string Text, double Rate)>();
     private readonly CancellationTokenSource _shutdown = new();
     private CancellationTokenSource _current = new();
     private volatile bool _speaking;
-    private (WaveOut Output, byte[] Pcm)? _active;
+    private (IPlayback Output, byte[] Pcm)? _active;
     private int _stopGeneration;
     private int _pauseCount;
     private volatile bool _paused;
 
-    public Speaker(string piperExe, string voicePath)
+    public Speaker(ISpeechVoice voice)
     {
-        _piperExe = piperExe;
-        _voicePath = voicePath;
-
-        using var config = JsonDocument.Parse(File.ReadAllText(voicePath + ".json"));
-        _sampleRate = config.RootElement.GetProperty("audio").GetProperty("sample_rate").GetInt32();
-
+        _voice = voice;
         _ = Task.Run(LoopAsync);
     }
 
@@ -75,7 +63,7 @@ public sealed class Speaker : IDisposable
             return;
 
         _paused = false;
-        _active?.Output.Play();
+        _active?.Output.Resume();
     }
 
     /// <summary>While this returns true, queued sentences wait instead of starting.</summary>
@@ -135,8 +123,8 @@ public sealed class Speaker : IDisposable
 
                 try
                 {
-                    var pcm = await SynthesizeAsync(text, rate, _current.Token);
-                    await Play(pcm, _sampleRate, _current.Token, isSpeech: true);
+                    var pcm = await _voice.SynthesizeAsync(text, Math.Clamp(rate, MinRate, MaxRate), _current.Token);
+                    await Play(pcm, _voice.SampleRate, _current.Token, isSpeech: true);
                 }
                 catch (OperationCanceledException)
                 {
@@ -156,53 +144,15 @@ public sealed class Speaker : IDisposable
         }
     }
 
-    private async Task<byte[]> SynthesizeAsync(string text, double rate, CancellationToken cancellationToken)
-    {
-        // Piper's length scale is the inverse of speed: a smaller value means shorter, faster phonemes.
-        var lengthScale = (1 / Math.Clamp(rate, MinRate, MaxRate)).ToString("0.###", CultureInfo.InvariantCulture);
-
-        using var process = new Process
-        {
-            StartInfo = new ProcessStartInfo(_piperExe)
-            {
-                ArgumentList = { "--model", _voicePath, "--output_raw", "--length_scale", lengthScale },
-                WorkingDirectory = Path.GetDirectoryName(_piperExe)!,
-                RedirectStandardInput = true,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                StandardInputEncoding = new UTF8Encoding(false),
-                UseShellExecute = false,
-                CreateNoWindow = true,
-            },
-        };
-
-        process.Start();
-        _ = process.StandardError.ReadToEndAsync(cancellationToken);
-
-        await process.StandardInput.WriteLineAsync(text);
-        process.StandardInput.Close();
-
-        using var pcm = new MemoryStream();
-        await process.StandardOutput.BaseStream.CopyToAsync(pcm, cancellationToken);
-        await process.WaitForExitAsync(cancellationToken);
-        return pcm.ToArray();
-    }
-
     private async Task Play(byte[] pcm, int sampleRate, CancellationToken cancellationToken, bool isSpeech = false)
     {
-        using var stream = new RawSourceWaveStream(new MemoryStream(pcm), new WaveFormat(sampleRate, 16, 1));
-        using var output = new WaveOut();
-        var finished = new TaskCompletionSource();
-
-        output.PlaybackStopped += (_, _) => finished.TrySetResult();
-        output.Init(stream);
-        output.Play();
+        using var output = AudioDevices.Play(pcm, sampleRate);
 
         if (isSpeech)
             _active = (output, pcm);
 
         await using (cancellationToken.Register(output.Stop))
-            await finished.Task;
+            await output.Completion;
 
         if (isSpeech)
             _active = null;
@@ -216,16 +166,9 @@ public sealed class Speaker : IDisposable
             if (_active is not { } active)
                 return 0;
 
-            try
-            {
-                var position = (int)Math.Min(active.Output.GetPosition(), active.Pcm.Length) & ~1;
-                var length = Math.Min(LevelWindowBytes, active.Pcm.Length - position);
-                return AudioLevel.FromPcm16(active.Pcm.AsSpan(position, length));
-            }
-            catch (Exception e) when (e is ObjectDisposedException or NAudio.MmException)
-            {
-                return 0;
-            }
+            var position = (int)Math.Min(active.Output.PlayedBytes, active.Pcm.Length) & ~1;
+            var length = Math.Min(LevelWindowBytes, active.Pcm.Length - position);
+            return AudioLevel.FromPcm16(active.Pcm.AsSpan(position, length));
         }
     }
 

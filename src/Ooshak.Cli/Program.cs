@@ -49,7 +49,7 @@ switch (args.FirstOrDefault())
     case "pause-test":
     {
         var config = OoshakConfig.Load();
-        using var speaker = new Speaker(config.ModelPath(config.PiperExe), config.ModelPath(config.PiperVoice));
+        using var speaker = new Speaker(SpeechVoices.Create(config));
         var watch = System.Diagnostics.Stopwatch.StartNew();
         speaker.Say("Bu kısa bir duraklatma denemesidir, birazdan duracağım ve sonra kaldığım yerden devam edeceğim.");
         Thread.Sleep(1500);
@@ -76,7 +76,7 @@ switch (args.FirstOrDefault())
     case "say" when args.Length is 2 or 3:
     {
         var config = OoshakConfig.Load();
-        using var speaker = new Speaker(config.ModelPath(config.PiperExe), config.ModelPath(config.PiperVoice));
+        using var speaker = new Speaker(SpeechVoices.Create(config));
         var watch = System.Diagnostics.Stopwatch.StartNew();
         speaker.Say(args[1], args.Length == 3 ? double.Parse(args[2], System.Globalization.CultureInfo.InvariantCulture) : 1.0);
         Thread.Sleep(300);

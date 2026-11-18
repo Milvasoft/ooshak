@@ -40,7 +40,7 @@ public sealed class VoiceLoop : IDisposable
     private readonly ConcurrentDictionary<string, byte> _instructed = new();
     private readonly CancellationTokenSource _shutdown = new();
     private readonly VoiceRouter _router;
-    private readonly ClaudeWindow _claude = new();
+    private readonly IClaudeDesktop _claude = ClaudeDesktop.Open();
     private readonly Transcriber _transcriber;
     private readonly SileroVad _vad;
     private readonly AudioListener _listener;
@@ -69,8 +69,8 @@ public sealed class VoiceLoop : IDisposable
         _router.SetEnglish(config.Language == L.English);
         _transcriber = new Transcriber(config.ModelPath(config.WhisperModel), config.Language);
         _vad = new SileroVad(config.ModelPath(config.VadModel));
-        _listener = new AudioListener(_vad, new UtteranceSegmenter(config.SilenceMs), config.MicrophoneDevice);
-        _speaker = new Speaker(config.ModelPath(config.PiperExe), config.ModelPath(config.ActiveVoice));
+        _listener = new AudioListener(_vad, new UtteranceSegmenter(config.SilenceMs), AudioDevices.OpenMicrophone(config.MicrophoneDevice));
+        _speaker = new Speaker(SpeechVoices.Create(config));
         _hooks = new HookServer(config.Port, OnHook, OnPermissionAsync);
         _speaker.Drained += OnSpeechDrained;
         _speaker.Hold = () => _listener.InSpeech || _working;

@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 
 namespace Ooshak.Core;
 
@@ -91,7 +91,7 @@ public sealed class OoshakConfig
     /// <summary>The user's own spellings, which override the built-in terms in SpeechTerms.txt.</summary>
     public Dictionary<string, string> Pronunciations { get; set; } = [];
 
-    /// <summary>Wave device number, or -1 for the Windows default microphone.</summary>
+    /// <summary>Microphone number in the device list, or -1 for the system default.</summary>
     public int MicrophoneDevice { get; set; } = -1;
 
     /// <summary>Stops listening and reading while a game or video fills the screen.</summary>

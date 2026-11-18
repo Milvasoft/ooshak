@@ -1,6 +1,5 @@
 ﻿using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
-using NAudio.Wave;
 
 namespace Ooshak.Core;
 
@@ -120,15 +119,8 @@ public sealed class UtteranceSegmenter(int silenceMs)
 }
 
 /// <summary>Reads the default microphone and raises one event per finished utterance.</summary>
-public sealed class AudioListener(SileroVad vad, UtteranceSegmenter segmenter, int deviceNumber) : IDisposable
+public sealed class AudioListener(SileroVad vad, UtteranceSegmenter segmenter, IMicrophone microphone) : IDisposable
 {
-    private readonly WaveIn _wave = new()
-    {
-        WaveFormat = new WaveFormat(16000, 16, 1),
-        BufferMilliseconds = 32,
-        DeviceNumber = deviceNumber,
-    };
-
     private readonly float[] _frame = new float[SileroVad.FrameSamples];
     private int _filled;
     private volatile float _level;
@@ -158,16 +150,15 @@ public sealed class AudioListener(SileroVad vad, UtteranceSegmenter segmenter, i
         }
     }
 
-    public static IReadOnlyList<string> DeviceNames() =>
-        Enumerable.Range(0, WaveIn.DeviceCount).Select(i => WaveIn.GetCapabilities(i).ProductName).ToList();
+    public static IReadOnlyList<string> DeviceNames() => AudioDevices.MicrophoneNames();
 
     public void Start()
     {
-        _wave.DataAvailable += OnData;
-        _wave.StartRecording();
+        microphone.Data += OnData;
+        microphone.Start();
     }
 
-    private void OnData(object? sender, WaveInEventArgs e)
+    private void OnData(byte[] buffer, int bytes)
     {
         if (Muted)
         {
@@ -176,11 +167,11 @@ public sealed class AudioListener(SileroVad vad, UtteranceSegmenter segmenter, i
             return;
         }
 
-        _level = AudioLevel.FromPcm16(e.Buffer.AsSpan(0, e.BytesRecorded));
+        _level = AudioLevel.FromPcm16(buffer.AsSpan(0, bytes));
 
-        for (var i = 0; i + 1 < e.BytesRecorded; i += 2)
+        for (var i = 0; i + 1 < bytes; i += 2)
         {
-            var sample = BitConverter.ToInt16(e.Buffer, i) / 32768f;
+            var sample = BitConverter.ToInt16(buffer, i) / 32768f;
             lock (_recent)
             {
                 _recent[_recentEnd] = sample;
@@ -201,8 +192,8 @@ public sealed class AudioListener(SileroVad vad, UtteranceSegmenter segmenter, i
 
     public void Dispose()
     {
-        _wave.StopRecording();
-        _wave.Dispose();
+        microphone.Data -= OnData;
+        microphone.Dispose();
     }
 }
 

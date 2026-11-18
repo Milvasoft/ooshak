@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Nodes;
 
 namespace Ooshak.Core;
@@ -15,13 +15,16 @@ public static class HookInstaller
     public static string SettingsPath => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".claude", "settings.json");
 
-    public static string Command(int port, string route) =>
-        $"curl.exe -s -m 2 -X POST -H \"{Marker}: 1\" --data-binary @- http://localhost:{port}/{route}";
+    // Windows names the binary so PowerShell's curl alias is never taken; macOS ships plain curl.
+    private static string Curl => OperatingSystem.IsWindows() ? "curl.exe" : "curl";
 
-    // Waits for the answer and prints it. "exit 0" works in Git Bash and PowerShell alike, and keeps
+    public static string Command(int port, string route) =>
+        $"{Curl} -s -m 2 -X POST -H \"{Marker}: 1\" --data-binary @- http://localhost:{port}/{route}";
+
+    // Waits for the answer and prints it. "exit 0" works in Git Bash, PowerShell and sh alike, and keeps
     // an unreachable Ooshak from counting as a failed hook, so Claude's own dialog simply appears.
     public static string PermissionCommand(int port) =>
-        $"curl.exe -s -m {PermissionWaitSeconds} -X POST -H \"{Marker}: 1\" --data-binary \"@-\" http://localhost:{port}/{HookServer.PermissionRoute}; exit 0";
+        $"{Curl} -s -m {PermissionWaitSeconds} -X POST -H \"{Marker}: 1\" --data-binary \"@-\" http://localhost:{port}/{HookServer.PermissionRoute}; exit 0";
 
     public static bool IsInstalled() =>
         File.Exists(SettingsPath) && File.ReadAllText(SettingsPath).Contains($"/{HookServer.PermissionRoute}", StringComparison.Ordinal);

@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 
 namespace Ooshak.Core;
 
@@ -49,6 +49,31 @@ public static class SessionCatalog
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Claude", "claude-code-sessions");
         if (Directory.Exists(roaming))
             yield return roaming;
+
+        if (!OperatingSystem.IsMacOS())
+            yield break;
+
+        // .NET maps ApplicationData to ~/.config on macOS, but the app keeps its data under Library.
+        var support = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Library", "Application Support");
+
+        foreach (var app in new[] { "Claude", "Claude-Data" })
+        {
+            var appRoot = Path.Combine(support, app);
+            if (!Directory.Exists(appRoot))
+                continue;
+
+            var direct = Path.Combine(appRoot, "claude-code-sessions");
+            if (Directory.Exists(direct))
+                yield return direct;
+
+            foreach (var profile in Directory.EnumerateDirectories(appRoot))
+            {
+                var path = Path.Combine(profile, "claude-code-sessions");
+                if (Directory.Exists(path))
+                    yield return path;
+            }
+        }
     }
 
     private static SessionInfo? TryRead(string file)
@@ -62,7 +87,7 @@ public static class SessionCatalog
             if (root.TryGetProperty("isArchived", out var archived) && archived.ValueKind == JsonValueKind.True)
                 return null;
 
-            var title = ClaudeWindow.Normalize(GetString(root, "title"));
+            var title = ClaudeText.Normalize(GetString(root, "title"));
             var cliId = GetString(root, "cliSessionId");
             if (title.Length == 0 || cliId.Length == 0)
                 return null;

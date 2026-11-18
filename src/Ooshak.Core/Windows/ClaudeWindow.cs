@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using FlaUI.Core.AutomationElements;
@@ -7,24 +7,11 @@ using FlaUI.UIA3;
 
 namespace Ooshak.Core;
 
-public enum DeliveryStatus
-{
-    Sent,
-    WindowNotFound,
-    UserIsTyping,
-    SessionNotInSidebar,
-    SwitchTimedOut,
-    PromptNotFound,
-    TargetHasDraft,
-    NoSendButton,
-    NotConfirmed,
-}
-
 /// <summary>
 /// Drives the Claude desktop window through UI Automation, so text reaches a session
 /// without taking keyboard focus from whatever the user is doing.
 /// </summary>
-public sealed class ClaudeWindow : IDisposable
+public sealed class ClaudeWindow : IClaudeDesktop
 {
     private const string DocumentSuffix = " - Claude Code";
     private const string PromptName = "Prompt";
@@ -169,7 +156,7 @@ public sealed class ClaudeWindow : IDisposable
     {
         try
         {
-            Process.Start(new ProcessStartInfo($"claude://claude.ai/epitaxy/{localId}") { UseShellExecute = true });
+            Process.Start(new ProcessStartInfo(ClaudeDesktop.SessionLink(localId)) { UseShellExecute = true });
             return true;
         }
         catch (Win32Exception)
@@ -234,8 +221,7 @@ public sealed class ClaudeWindow : IDisposable
         return condition();
     }
 
-    public static string Normalize(string? value) =>
-        string.Join(' ', (value ?? "").Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+    public static string Normalize(string? value) => ClaudeText.Normalize(value);
 
     public void Dispose() => _automation.Dispose();
 }

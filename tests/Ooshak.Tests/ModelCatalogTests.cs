@@ -1,4 +1,4 @@
-using Ooshak.Core;
+﻿using Ooshak.Core;
 
 namespace Ooshak.Tests;
 
@@ -8,11 +8,26 @@ public sealed class ModelCatalogTests : IDisposable
 
     [Fact]
     public void An_empty_folder_needs_every_model() =>
-        Assert.Equal(ModelCatalog.All.Count, ModelCatalog.Missing(_directory).Count);
+        Assert.Equal(ModelCatalog.Needed.Count, ModelCatalog.Missing(_directory).Count);
+
+    [Fact]
+    public void Windows_needs_every_model() =>
+        Assert.Equal(ModelCatalog.All.Count, ModelCatalog.ForPlatform(windows: true).Count);
+
+    [Fact]
+    public void The_mac_needs_no_piper_files()
+    {
+        var names = ModelCatalog.ForPlatform(windows: false).Select(f => f.Name).ToList();
+
+        Assert.Equal(["silero_vad.onnx", "ggml-large-v3-turbo.bin"], names);
+    }
 
     [Fact]
     public void An_unpacked_archive_counts_as_present()
     {
+        if (!OperatingSystem.IsWindows())
+            return;
+
         Directory.CreateDirectory(Path.Combine(_directory, "piper"));
         File.WriteAllText(Path.Combine(_directory, "piper", "piper.exe"), "");
 

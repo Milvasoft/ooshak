@@ -1,11 +1,12 @@
-using System.IO.Compression;
+﻿using System.IO.Compression;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
 
 namespace Ooshak.Core;
 
 /// <param name="ExtractCheck">For an archive, a file that exists once it has been unpacked.</param>
-public sealed record ModelFile(string Name, string Url, long Size, string Sha256, string? ExtractCheck = null);
+/// <param name="WindowsOnly">Piper and its voices: macOS speaks with its own system voices.</param>
+public sealed record ModelFile(string Name, string Url, long Size, string Sha256, string? ExtractCheck = null, bool WindowsOnly = false);
 
 public sealed record ModelProgress(string File, long Done, long Total);
 
@@ -27,22 +28,28 @@ public static class ModelCatalog
             2_327_524, "1A153A22F4509E292A94E67D6F9B85E8DEB25B4988682B7E174C65279D8788E3"),
         new("piper_windows_amd64.zip",
             "https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_windows_amd64.zip",
-            22_477_236, "F3C58906402B24F3A96D92145F58ACBA6D86C9B5DB896D207F78DC80811EFCEA", @"piper\piper.exe"),
+            22_477_236, "F3C58906402B24F3A96D92145F58ACBA6D86C9B5DB896D207F78DC80811EFCEA", @"piper\piper.exe", WindowsOnly: true),
         new("tr_TR-dfki-medium.onnx", $"{Voices}/tr/tr_TR/dfki/medium/tr_TR-dfki-medium.onnx",
-            63_201_294, "2844717F524AB965D3FE86E60562CBB601D3E456836EFCC2196CC3A14112A8FB"),
+            63_201_294, "2844717F524AB965D3FE86E60562CBB601D3E456836EFCC2196CC3A14112A8FB", WindowsOnly: true),
         new("tr_TR-dfki-medium.onnx.json", $"{Voices}/tr/tr_TR/dfki/medium/tr_TR-dfki-medium.onnx.json",
-            4_960, "13EBD7810F1B61B5027583CF3131A0A233B6EA81C38F2200EBC4FF41C3CCA039"),
+            4_960, "13EBD7810F1B61B5027583CF3131A0A233B6EA81C38F2200EBC4FF41C3CCA039", WindowsOnly: true),
         new("en_US-ljspeech-medium.onnx", $"{Voices}/en/en_US/ljspeech/medium/en_US-ljspeech-medium.onnx",
-            63_531_379, "6F52A751E2349ABE7A76735EB09DC1875298C77EA2342FFD2FEF79FF81B87F22"),
+            63_531_379, "6F52A751E2349ABE7A76735EB09DC1875298C77EA2342FFD2FEF79FF81B87F22", WindowsOnly: true),
         new("en_US-ljspeech-medium.onnx.json", $"{Voices}/en/en_US/ljspeech/medium/en_US-ljspeech-medium.onnx.json",
-            4_972, "141D612CC0A95ED7EFC1CA936B845C2364967F2E9217C5DBFCF69FC4D6C65860"),
+            4_972, "141D612CC0A95ED7EFC1CA936B845C2364967F2E9217C5DBFCF69FC4D6C65860", WindowsOnly: true),
         new("ggml-large-v3-turbo.bin",
             $"https://huggingface.co/ggerganov/whisper.cpp/resolve/{WhisperRevision}/ggml-large-v3-turbo.bin",
             1_624_555_275, "1FC70F774D38EB169993AC391EEA357EF47C88757EF72EE5943879B7E8E2BC69"),
     ];
 
+    /// <summary>The files this platform uses.</summary>
+    public static IReadOnlyList<ModelFile> Needed => ForPlatform(OperatingSystem.IsWindows());
+
+    public static IReadOnlyList<ModelFile> ForPlatform(bool windows) =>
+        All.Where(f => windows || !f.WindowsOnly).ToList();
+
     public static IReadOnlyList<ModelFile> Missing(string modelsDir) =>
-        All.Where(f => !File.Exists(Path.Combine(modelsDir, f.ExtractCheck ?? f.Name))).ToList();
+        Needed.Where(f => !File.Exists(Path.Combine(modelsDir, f.ExtractCheck ?? f.Name))).ToList();
 
     public static long TotalBytes(IEnumerable<ModelFile> files) => files.Sum(f => f.Size);
 }
