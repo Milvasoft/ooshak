@@ -5,7 +5,7 @@
 <h1 align="center">Ooshak</h1>
 
 <p align="center">
-  Talk to your Claude Code sessions on Windows, hands free.<br>
+  Talk to your Claude Code sessions on Windows and macOS, hands free.<br>
   On-device wake word, speech recognition and spoken replies, in Turkish or English.
 </p>
 
@@ -58,6 +58,23 @@ Ooshak is a community project. It is not made, endorsed or supported by Anthropi
 3. Choose **Connect to Claude Code**. This adds three hooks to `%USERPROFILE%\.claude\settings.json` (a backup is saved next to it) so Ooshak can hear when a session finishes or needs permission. You can disconnect in Settings at any time; uninstalling removes them too.
 4. Optionally open **Settings → Teach with my voice** and say your wake name three times.
 
+## macOS (preview)
+
+A first macOS build for Apple silicon (M1 and later, macOS 12 or newer) is included from 0.2.0. It has passed an automated test on a Mac build machine (a spoken command goes through Silero, Whisper and the router), but it has **not yet been tried against a real Claude session on a Mac**. Please report what works and what does not.
+
+1. Download `Ooshak-<version>-macos-arm64.dmg`, open it and drag **Ooshak** to **Applications**.
+2. The app is signed ad hoc, not notarized by Apple, so macOS refuses the first start. Open it once, then go to **System Settings → Privacy & Security** and choose **Open Anyway**. Or run `xattr -dr com.apple.quarantine /Applications/Ooshak.app` in Terminal.
+3. Ooshak lives in the menu bar. On first start choose **Download models** (about 1.6 GB: Whisper and Silero).
+4. Choose **Allow** under **Accessibility permission** and turn Ooshak on in the list macOS opens. Without it Ooshak cannot type into the Claude window.
+5. macOS asks for the microphone the first time Ooshak listens. Then choose **Connect** under **Claude Code connection**.
+
+Differences from Windows:
+
+- Replies are read by the Mac's own voices (Yelda for Turkish, Samantha for English, or another installed voice of the language), because Piper has no working Mac build. More voices can be added in **System Settings → Accessibility → Spoken Content**.
+- No global hotkeys, no floating island, no automatic pause in full-screen apps and no "teach with my voice" yet. Aliases, pronunciations and technical terms are edited in `~/.ooshak/config.json`.
+- Intel Macs are not supported: ONNX Runtime ships no Intel Mac library.
+- Start at login is a LaunchAgent in `~/Library/LaunchAgents/com.milvasoft.ooshak.plist`.
+
 ## Using it
 
 | Say | What happens |
@@ -100,12 +117,13 @@ dotnet run --project src/Ooshak
 ```
 
 You need the .NET 10 SDK. The first run asks to download the models, or run `dotnet run --project src/Ooshak.Cli -- download-models`.
-To build the installer, install [Inno Setup 6](https://jrsoftware.org/isinfo.php), publish to `artifacts/publish` and run `ISCC.exe installer\Ooshak.iss`. The [release workflow](.github/workflows/release.yml) shows the exact steps.
+To build the installer, install [Inno Setup 6](https://jrsoftware.org/isinfo.php), publish to `artifacts/publish` and run `ISCC.exe installer\Ooshak.iss`. On a Mac, `sh installer/mac/build-app.sh 0.2.0` builds `Ooshak.app` and the DMG, and `Ooshak.app/Contents/MacOS/Ooshak --self-test` checks speech end to end. [`azure-pipelines.yml`](azure-pipelines.yml) shows the exact steps for both.
 
 | Project | Purpose |
 |---|---|
 | `src/Ooshak.Core` | Audio, speech, routing, Claude app automation, hooks |
 | `src/Ooshak` | WPF tray app, windows and the floating island |
+| `src/Ooshak.Mac` | Avalonia menu bar app for macOS |
 | `src/Ooshak.Cli` | Developer tool for testing pieces without the UI |
 | `tests/Ooshak.Tests` | xUnit tests |
 

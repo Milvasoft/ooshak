@@ -2,6 +2,18 @@
 
 All notable changes to Ooshak are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.2.0] - 2026-11-19
+
+### Added
+
+- A macOS preview for Apple silicon: a menu bar app with the same voice loop, delivered as a DMG. It uses the Accessibility API to type into the Claude app, PortAudio for sound, Whisper on Metal and the Mac's own voices for replies. It is signed ad hoc, not notarized, and has not yet been tried on a real Claude session; see the README for what is missing.
+- Windows and macOS setup files are built and tested by an Azure pipeline (`azure-pipelines.yml`).
+
+### Fixed
+
+- Ooshak no longer pauses itself all the time when the taskbar auto-hides: a maximized window covering the whole screen is not taken for a full-screen game or video any more.
+- Connecting to Claude Code works when Claude Code has not created its settings file yet.
+
 ## [0.1.2] - 2026-11-11
 
 ### Fixed
@@ -35,6 +47,7 @@ First public preview.
 - First-run model download with pinned revisions and SHA-256 checks.
 - Per-user Windows installer.
 
+[0.2.0]: https://github.com/Milvasoft/ooshak/releases/tag/v0.2.0
 [0.1.2]: https://github.com/Milvasoft/ooshak/releases/tag/v0.1.2
 [0.1.1]: https://github.com/Milvasoft/ooshak/releases/tag/v0.1.1
 [0.1.0]: https://github.com/Milvasoft/ooshak/releases/tag/v0.1.0

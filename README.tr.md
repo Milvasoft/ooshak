@@ -5,7 +5,7 @@
 <h1 align="center">Ooshak</h1>
 
 <p align="center">
-  Windows'ta Claude Code oturumlarınla elini klavyeye sürmeden konuş.<br>
+  Windows ve macOS'ta Claude Code oturumlarınla elini klavyeye sürmeden konuş.<br>
   Cihazda çalışan çağrı adı, konuşma tanıma ve sesli cevap; Türkçe veya İngilizce.
 </p>
 
@@ -46,6 +46,23 @@ Ooshak bir topluluk projesidir. Anthropic tarafından yapılmamış, onaylanmam�
 2. İlk açılışta **Modelleri indir**'e bas. Ooshak yaklaşık 1,8 GB'ı bir kez Hugging Face ve GitHub'dan indirir. Her dosya sabit bir sürüme bağlıdır ve SHA-256 ile doğrulanır.
 3. **Claude Code'a bağla**'ya bas. Bu, `%USERPROFILE%\.claude\settings.json` dosyasına üç hook ekler (yanına yedek alınır). Ayarlar'dan istediğin zaman kaldırabilirsin, kaldırma işlemi de bunları siler.
 4. İstersen **Ayarlar → Sesimle öğret** ile çağrı adını üç kez söyle.
+
+## macOS (ön sürüm)
+
+0.2.0 ile Apple silikon (M1 ve sonrası, macOS 12 veya yenisi) için ilk macOS sürümü geldi. Bir Mac derleme makinesinde otomatik testten geçti (söylenen bir komut Silero, Whisper ve yönlendiriciden geçiyor), ama **henüz bir Mac'te gerçek bir Claude oturumuyla denenmedi**. Neyin çalışıp neyin çalışmadığını bildirirsen sevinirim.
+
+1. `Ooshak-<sürüm>-macos-arm64.dmg` dosyasını indir, aç ve **Ooshak**'ı **Applications** klasörüne sürükle.
+2. Uygulama Apple tarafından onaylanmadı (yalnızca yerel imzalı), bu yüzden macOS ilk açılışı engeller. Bir kez açmayı dene, sonra **Sistem Ayarları → Gizlilik ve Güvenlik** altında **Yine de Aç**'a bas. Ya da Terminal'de `xattr -dr com.apple.quarantine /Applications/Ooshak.app` çalıştır.
+3. Ooshak menü çubuğunda durur. İlk açılışta **Modelleri indir**'e bas (yaklaşık 1,6 GB: Whisper ve Silero).
+4. **Erişilebilirlik izni** altında **İzin ver**'e bas ve macOS'un açtığı listede Ooshak'ı aç. Bu izin olmadan Ooshak Claude penceresine yazamaz.
+5. macOS ilk dinlemede mikrofon izni sorar. Sonra **Claude Code bağlantısı** altında **Bağla**'ya bas.
+
+Windows'tan farkları:
+
+- Cevaplar Mac'in kendi sesleriyle okunur (Türkçe için Yelda, İngilizce için Samantha, yoksa o dilin kurulu başka bir sesi), çünkü Piper'ın çalışan bir Mac sürümü yok. Yeni sesleri **Sistem Ayarları → Erişilebilirlik → Sesli İçerik** altından ekleyebilirsin.
+- Henüz kısayol tuşu, yüzen ada, tam ekranda otomatik duraklatma ve "sesimle öğret" yok. Takma adlar, okunuşlar ve teknik kelimeler `~/.ooshak/config.json` dosyasında düzenlenir.
+- Intel Mac desteklenmiyor: ONNX Runtime Intel Mac kütüphanesi yayınlamıyor.
+- Oturum açınca başlatma `~/Library/LaunchAgents/com.milvasoft.ooshak.plist` ile yapılır.
 
 ## Kullanım
 

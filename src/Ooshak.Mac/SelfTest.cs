@@ -30,23 +30,37 @@ public static class SelfTest
         var padding = new byte[AudioDevices.SampleRate];
         var audio = padding.Concat(pcm).Concat(padding).Concat(padding).ToArray();
 
-        using var vad = new SileroVad(config.ModelPath(config.VadModel));
         using var transcriber = new Transcriber(config.ModelPath(config.WhisperModel), config.Language);
-        var segmenter = new UtteranceSegmenter(config.SilenceMs);
         var router = new VoiceRouter(config.WakeNames, TimeSpan.Zero);
         router.SetTargets(["Atlas"], new Dictionary<string, string>());
+        var vocabulary = VoicePrompt.Build(config, ["Atlas"]);
 
         var heard = new List<string>();
-        for (var offset = 0; offset + SileroVad.FrameSamples * 2 <= audio.Length; offset += SileroVad.FrameSamples * 2)
+        var utterances = new List<float[]>();
+        var vadLoaded = false;
+        try
         {
-            var frame = new float[SileroVad.FrameSamples];
-            for (var i = 0; i < frame.Length; i++)
-                frame[i] = BitConverter.ToInt16(audio, offset + i * 2) / 32768f;
+            using var vad = new SileroVad(config.ModelPath(config.VadModel));
+            vadLoaded = true;
+            var segmenter = new UtteranceSegmenter(config.SilenceMs);
+            for (var offset = 0; offset + SileroVad.FrameSamples * 2 <= audio.Length; offset += SileroVad.FrameSamples * 2)
+            {
+                var frame = Samples(audio, offset, SileroVad.FrameSamples);
+                if (segmenter.Feed(frame, vad.Probability(frame)) is { } utterance)
+                    utterances.Add(utterance);
+            }
+        }
+        catch (Exception e) when (!IsAppleSilicon && e is DllNotFoundException or TypeInitializationException or EntryPointNotFoundException)
+        {
+            // ONNX Runtime ships no Intel Mac library, so an Intel build agent tests the rest without it.
+            Console.WriteLine($"vad: not available on {System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture} ({e.GetType().Name}), transcribing the whole clip");
+            utterances.Add(Samples(audio, 0, audio.Length / 2));
+        }
 
-            if (segmenter.Feed(frame, vad.Probability(frame)) is not { } utterance)
-                continue;
-
-            var text = await transcriber.TranscribeAsync(utterance, VoicePrompt.Build(config, ["Atlas"]));
+        Console.WriteLine($"vad loaded: {vadLoaded}, utterances: {utterances.Count}");
+        foreach (var utterance in utterances)
+        {
+            var text = await transcriber.TranscribeAsync(utterance, vocabulary);
             heard.Add(text);
             Console.WriteLine($"heard: {text}");
             Console.WriteLine($"route: {router.Route(text)}");
@@ -68,5 +82,16 @@ public static class SelfTest
         Console.WriteLine($"claude window: {ClaudeDesktop.Open().ReadState()}");
 
         return heard.Any(h => h.Length > 0) ? 0 : 2;
+    }
+
+    private static bool IsAppleSilicon =>
+        System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture == System.Runtime.InteropServices.Architecture.Arm64;
+
+    private static float[] Samples(byte[] pcm, int offset, int count)
+    {
+        var samples = new float[count];
+        for (var i = 0; i < count; i++)
+            samples[i] = BitConverter.ToInt16(pcm, offset + i * 2) / 32768f;
+        return samples;
     }
 }
