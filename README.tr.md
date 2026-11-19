@@ -49,7 +49,7 @@ Ooshak bir topluluk projesidir. Anthropic tarafından yapılmamış, onaylanmam�
 
 ## macOS (ön sürüm)
 
-0.2.0 ile Apple silikon (M1 ve sonrası, macOS 12 veya yenisi) için ilk macOS sürümü geldi. Bir Mac derleme makinesinde otomatik testten geçti (söylenen bir komut Silero, Whisper ve yönlendiriciden geçiyor), ama **henüz bir Mac'te gerçek bir Claude oturumuyla denenmedi**. Neyin çalışıp neyin çalışmadığını bildirirsen sevinirim.
+0.2.0 ile Apple silikon (M1 ve sonrası, macOS 12 veya yenisi) için ilk macOS sürümü geldi. GitHub Actions'ın Mac makinesinde otomatik testten geçti (söylenen bir komut Silero, Whisper ve yönlendiriciden geçiyor), ama **henüz bir Mac'te gerçek bir Claude oturumuyla denenmedi**. Neyin çalışıp neyin çalışmadığını bildirirsen sevinirim.
 
 1. `Ooshak-<sürüm>-macos-arm64.dmg` dosyasını indir, aç ve **Ooshak**'ı **Applications** klasörüne sürükle.
 2. Uygulama Apple tarafından onaylanmadı (yalnızca yerel imzalı), bu yüzden macOS ilk açılışı engeller. Bir kez açmayı dene, sonra **Sistem Ayarları → Gizlilik ve Güvenlik** altında **Yine de Aç**'a bas. Ya da Terminal'de `xattr -dr com.apple.quarantine /Applications/Ooshak.app` çalıştır.

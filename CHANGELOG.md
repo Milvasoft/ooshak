@@ -7,7 +7,7 @@ All notable changes to Ooshak are listed here. The format follows [Keep a Change
 ### Added
 
 - A macOS preview for Apple silicon: a menu bar app with the same voice loop, delivered as a DMG. It uses the Accessibility API to type into the Claude app, PortAudio for sound, Whisper on Metal and the Mac's own voices for replies. It is signed ad hoc, not notarized, and has not yet been tried on a real Claude session; see the README for what is missing.
-- Windows and macOS setup files are built and tested by an Azure pipeline (`azure-pipelines.yml`).
+- The release workflow builds and tests both platforms on GitHub Actions; on the Mac runner `Ooshak --self-test` runs a spoken command through Silero, Whisper and the router.
 
 ### Fixed
 

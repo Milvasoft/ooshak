@@ -1,19 +1,30 @@
 name: Release
 
-# Releases are built by azure-pipelines.yml, which also makes the macOS DMG. This
-# Windows-only workflow stays as a manual fallback.
+# A v* tag builds both platforms and publishes the release. Run it by hand to build
+# and test without publishing, or to publish a version from a branch.
 on:
+  push:
+    tags: ['v*']
   workflow_dispatch:
     inputs:
       version:
         description: Version without the leading v, for example 0.2.0
         required: true
+      publish:
+        description: Create the GitHub release
+        type: boolean
+        default: false
 
 permissions:
   contents: write
 
+env:
+  VERSION: ${{ inputs.version || github.ref_name }}
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+  DOTNET_NOLOGO: '1'
+
 jobs:
-  release:
+  windows:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v7
@@ -24,12 +35,10 @@ jobs:
 
       - name: Read version
         shell: pwsh
-        run: |
-          $version = "${{ inputs.version }}"
-          "VERSION=$version" >> $env:GITHUB_ENV
+        run: '"VERSION=$($env:VERSION.TrimStart(''v''))" >> $env:GITHUB_ENV'
 
       - name: Test
-        run: dotnet test --configuration Release
+        run: dotnet test tests/Ooshak.Tests/Ooshak.Tests.csproj -c Release -f net10.0-windows
 
       - name: Publish
         run: dotnet publish src/Ooshak/Ooshak.csproj -c Release -r win-x64 --self-contained true -o artifacts/publish -p:Version=${{ env.VERSION }}
@@ -41,21 +50,63 @@ jobs:
           & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" /Q "/DAppVersion=$env:VERSION" "/DSourceDir=..\artifacts\publish" installer\Ooshak.iss
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      - name: Write checksums
-        shell: pwsh
+      - uses: actions/upload-artifact@v7
+        with:
+          name: windows
+          path: artifacts/Ooshak-Setup-*.exe
+          if-no-files-found: error
+
+  macos:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Read version
         run: |
-          # LF endings so that `sha256sum -c` works on Linux and in Git Bash.
-          $lines = Get-ChildItem artifacts -Filter *.exe | ForEach-Object {
-            "$((Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower())  $($_.Name)"
-          }
-          [IO.File]::WriteAllText("$PWD/artifacts/SHA256SUMS.txt", (($lines -join "`n") + "`n"))
+          echo "VERSION=${VERSION#v}" >> "$GITHUB_ENV"
+          uname -m
+          sw_vers
+
+      - name: Test
+        run: dotnet test tests/Ooshak.Tests/Ooshak.Tests.csproj -c Release -f net10.0
+
+      - name: Build app and DMG
+        run: sh installer/mac/build-app.sh "$VERSION" osx-arm64
+
+      # Downloads the models, speaks a command with the system voice and runs it through Silero,
+      # Whisper and the router, so the native libraries are proven to load on a real Mac.
+      - name: Self test
+        run: artifacts/mac-arm64/Ooshak.app/Contents/MacOS/Ooshak --self-test
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: macos
+          path: artifacts/Ooshak-*-macos-*.dmg
+          if-no-files-found: error
+
+  release:
+    needs: [windows, macos]
+    if: startsWith(github.ref, 'refs/tags/v') || inputs.publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: artifacts
+          merge-multiple: true
 
       # Versions below 1.0 and versions with a suffix such as -beta are marked as pre-releases.
       - name: Create release
-        shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $prerelease = if ($env:VERSION -like '0.*' -or $env:VERSION -like '*-*') { '--prerelease' } else { '' }
-          gh release create "v$env:VERSION" artifacts/Ooshak-Setup-*.exe artifacts/SHA256SUMS.txt `
-            --title "Ooshak $env:VERSION" --generate-notes $prerelease
+          VERSION="${VERSION#v}"
+          cd artifacts
+          sha256sum Ooshak-* > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+          case "$VERSION" in 0.*|*-*) PRE=--prerelease ;; *) PRE= ;; esac
+          gh release create "v$VERSION" Ooshak-* SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" --title "Ooshak $VERSION" --generate-notes $PRE

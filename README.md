@@ -60,7 +60,7 @@ Ooshak is a community project. It is not made, endorsed or supported by Anthropi
 
 ## macOS (preview)
 
-A first macOS build for Apple silicon (M1 and later, macOS 12 or newer) is included from 0.2.0. It has passed an automated test on a Mac build machine (a spoken command goes through Silero, Whisper and the router), but it has **not yet been tried against a real Claude session on a Mac**. Please report what works and what does not.
+A first macOS build for Apple silicon (M1 and later, macOS 12 or newer) is included from 0.2.0. It has passed an automated test on a GitHub Actions Mac runner (a spoken command goes through Silero, Whisper and the router), but it has **not yet been tried against a real Claude session on a Mac**. Please report what works and what does not.
 
 1. Download `Ooshak-<version>-macos-arm64.dmg`, open it and drag **Ooshak** to **Applications**.
 2. The app is signed ad hoc, not notarized by Apple, so macOS refuses the first start. Open it once, then go to **System Settings → Privacy & Security** and choose **Open Anyway**. Or run `xattr -dr com.apple.quarantine /Applications/Ooshak.app` in Terminal.
@@ -117,7 +117,7 @@ dotnet run --project src/Ooshak
 ```
 
 You need the .NET 10 SDK. The first run asks to download the models, or run `dotnet run --project src/Ooshak.Cli -- download-models`.
-To build the installer, install [Inno Setup 6](https://jrsoftware.org/isinfo.php), publish to `artifacts/publish` and run `ISCC.exe installer\Ooshak.iss`. On a Mac, `sh installer/mac/build-app.sh 0.2.0` builds `Ooshak.app` and the DMG, and `Ooshak.app/Contents/MacOS/Ooshak --self-test` checks speech end to end. [`azure-pipelines.yml`](azure-pipelines.yml) shows the exact steps for both.
+To build the installer, install [Inno Setup 6](https://jrsoftware.org/isinfo.php), publish to `artifacts/publish` and run `ISCC.exe installer\Ooshak.iss`. On a Mac, `sh installer/mac/build-app.sh 0.2.0` builds `Ooshak.app` and the DMG, and `Ooshak.app/Contents/MacOS/Ooshak --self-test` checks speech end to end. The [release workflow](.github/workflows/release.yml) shows the exact steps for both.
 
 | Project | Purpose |
 |---|---|
