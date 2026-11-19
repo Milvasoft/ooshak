@@ -1,4 +1,4 @@
-namespace Ooshak.Core;
+﻿namespace Ooshak.Core;
 
 public static class Translations
 {
@@ -160,5 +160,15 @@ public static class Translations
         ["Tamam, bundan sonra sana {0} diyeceğim."] = "Okay, from now on I will call you {0}.",
         ["Hitap: {0}"] = "Address: {0}",
         ["[Bana “{0}” diye hitap et.]"] = "[Address me as “{0}”.]",
+        ["Ooshak konuşmanı bu Mac'te tanır ve cevapları burada okur, sesin dışarı gönderilmez. Bunun için bir kez yaklaşık 1,6 GB model indirilecek: Whisper ve Silero. Cevaplar macOS'un kendi sesleriyle okunur."] = "Ooshak recognizes your speech and reads replies on this Mac, and your voice is never sent anywhere. For that it downloads about 1.6 GB of models once: Whisper and Silero. Replies are read with the Mac's own voices.",
+        ["Erişilebilirlik izni"] = "Accessibility permission",
+        ["Verildi. Ooshak Claude penceresine yazabilir."] = "Granted. Ooshak can type into the Claude window.",
+        ["Gerekli. Ooshak bu izin olmadan Claude penceresine yazamaz."] = "Needed. Without it Ooshak cannot type into the Claude window.",
+        ["Mikrofon izni"] = "Microphone permission",
+        ["macOS ilk dinlemede mikrofon izni sorar. Reddettiysen Sistem Ayarları'ndan aç."] = "macOS asks for the microphone the first time Ooshak listens. If you declined, turn it on in System Settings.",
+        ["Mikrofon ayarlarını aç"] = "Open microphone settings",
+        ["Oturum açınca başlat"] = "Start at login",
+        ["Varsayılan mikrofon"] = "Default microphone",
+        ["Takma adlar, okunuşlar ve teknik kelimeler ayar dosyasında: ~/.ooshak/config.json"] = "Aliases, pronunciations and technical terms are in the settings file: ~/.ooshak/config.json",
     };
 }

@@ -40,7 +40,10 @@ public static class HookInstaller
     private static string Apply(int port, bool install)
     {
         var path = SettingsPath;
-        var root = JsonNode.Parse(File.ReadAllText(path))!.AsObject();
+        var exists = File.Exists(path);
+
+        // A fresh Claude Code install may have no settings file yet.
+        var root = exists ? JsonNode.Parse(File.ReadAllText(path))!.AsObject() : [];
         var hooks = root["hooks"]?.AsObject() ?? [];
 
         foreach (var name in Events)
@@ -62,8 +65,12 @@ public static class HookInstaller
         if (hooks.Count > 0)
             root["hooks"] = hooks;
 
-        var backup = $"{path}.bak-{DateTime.Now:yyyyMMdd-HHmmss}";
-        File.Copy(path, backup);
+        var backup = exists ? $"{path}.bak-{DateTime.Now:yyyyMMdd-HHmmss}" : "";
+        if (exists)
+            File.Copy(path, backup);
+        else
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+
         File.WriteAllText(path, root.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
         return backup;
     }

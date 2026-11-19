@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
@@ -74,7 +74,7 @@ public sealed class PiperVoice : ISpeechVoice
 }
 
 /// <summary>The macOS "say" command, writing 16-bit WAVE that is read back as PCM.</summary>
-public sealed partial class MacSayVoice(string language) : ISpeechVoice
+public sealed partial class MacSayVoice(string language, int sampleRate = 22050) : ISpeechVoice
 {
     private const string SayPath = "/usr/bin/say";
     private const int NaturalWordsPerMinute = 180;
@@ -88,7 +88,7 @@ public sealed partial class MacSayVoice(string language) : ISpeechVoice
 
     private readonly Lazy<string?> _voice = new(() => PickVoice(language));
 
-    public int SampleRate => 22050;
+    public int SampleRate => sampleRate;
 
     public async Task<byte[]> SynthesizeAsync(string text, double rate, CancellationToken cancellationToken)
     {

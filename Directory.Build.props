@@ -1,4 +1,4 @@
-<Project>
+﻿<Project>
   <PropertyGroup>
     <Version>0.1.2</Version>
     <Product>Ooshak</Product>
@@ -7,5 +7,7 @@
     <Copyright>Copyright © 2026 Milvasoft</Copyright>
     <RepositoryUrl>https://github.com/Milvasoft/ooshak</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <!-- Lets the shared projects restore their Windows target on the macOS build agent. -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
   </PropertyGroup>
 </Project>

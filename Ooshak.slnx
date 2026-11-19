@@ -1,7 +1,8 @@
-<Solution>
+﻿<Solution>
   <Folder Name="/src/">
     <Project Path="src/Ooshak.Cli/Ooshak.Cli.csproj" />
     <Project Path="src/Ooshak.Core/Ooshak.Core.csproj" />
+    <Project Path="src/Ooshak.Mac/Ooshak.Mac.csproj" />
     <Project Path="src/Ooshak/Ooshak.csproj" />
   </Folder>
   <Folder Name="/tests/">

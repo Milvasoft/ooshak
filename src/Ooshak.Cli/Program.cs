@@ -46,6 +46,32 @@ switch (args.FirstOrDefault())
         small.Save(Path.Combine(args[1], "logo-32.png"), System.Drawing.Imaging.ImageFormat.Png);
         return 0;
     }
+    case "make-mac-icons" when args.Length == 2:
+    {
+        // The iconset becomes Ooshak.icns through iconutil on a Mac; the tray images go into the app.
+        var brass = System.Drawing.Color.FromArgb(0xE9, 0xB4, 0x4C);
+        var slate = System.Drawing.Color.FromArgb(0x7A, 0x75, 0x6C);
+        var paper = System.Drawing.Color.FromArgb(0xF4, 0xEE, 0xE3);
+        var iconset = Path.Combine(args[1], "Ooshak.iconset");
+        Directory.CreateDirectory(iconset);
+
+        foreach (var size in new[] { 16, 32, 128, 256, 512 })
+        {
+            foreach (var (scale, suffix) in new[] { (1, ""), (2, "@2x") })
+            {
+                using var image = LogoPainter.Render(size * scale, brass, paper);
+                image.Save(Path.Combine(iconset, $"icon_{size}x{size}{suffix}.png"), System.Drawing.Imaging.ImageFormat.Png);
+            }
+        }
+
+        foreach (var (name, wings) in new[] { ("tray-on.png", brass), ("tray-off.png", slate) })
+        {
+            using var tray = LogoPainter.Render(44, wings, paper);
+            tray.Save(Path.Combine(args[1], name), System.Drawing.Imaging.ImageFormat.Png);
+        }
+
+        return 0;
+    }
     case "pause-test":
     {
         var config = OoshakConfig.Load();
