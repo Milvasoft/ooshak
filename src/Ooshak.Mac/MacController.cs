@@ -39,6 +39,7 @@ public sealed class MacController : IDisposable
     public LogBook Log { get; }
     public OoshakConfig Config { get; }
     public PermissionBroker Permissions { get; } = new();
+    public SessionBoard Board { get; } = new(SessionBoard.DefaultPath);
     public VoiceLoop? Loop { get; private set; }
     public string? StartError { get; private set; }
     public bool IsStarting { get; private set; } = true;
@@ -52,6 +53,7 @@ public sealed class MacController : IDisposable
     public async Task StartAsync(bool hidden)
     {
         L.Language = Config.Language;
+        UpgradeHooks();
         BuildTray();
         TrayIcon.SetIcons(_app, [_tray]);
 
@@ -93,6 +95,29 @@ public sealed class MacController : IDisposable
         if (_main.WindowState == WindowState.Minimized)
             _main.WindowState = WindowState.Normal;
         _main.Activate();
+    }
+
+    public void ShowWaiting()
+    {
+        ShowMain();
+        _main?.ShowWaiting();
+    }
+
+    /// <summary>Adds the hooks a newer version needs to a settings file that an older one connected.</summary>
+    private void UpgradeHooks()
+    {
+        try
+        {
+            if (HookInstaller.HasAny() && !HookInstaller.IsInstalled())
+            {
+                HookInstaller.Install(Config.Port);
+                Log.Add(L.T("Claude Code bağlantısı güncellendi."));
+            }
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.Text.Json.JsonException)
+        {
+            Log.Add(e.Message);
+        }
     }
 
     public void ToggleMute()
@@ -170,7 +195,7 @@ public sealed class MacController : IDisposable
         {
             Loop = await Task.Run(() =>
             {
-                var loop = new VoiceLoop(Config, Log, Permissions);
+                var loop = new VoiceLoop(Config, Log, Permissions, Board);
                 loop.Start();
                 return loop;
             });
@@ -194,6 +219,10 @@ public sealed class MacController : IDisposable
         var open = new NativeMenuItem(L.T("Ooshak'ı aç"));
         open.Click += (_, _) => ShowMain();
         menu.Add(open);
+
+        var waiting = new NativeMenuItem(L.T("Bekleyen oturumlar"));
+        waiting.Click += (_, _) => ShowWaiting();
+        menu.Add(waiting);
 
         _muteItem = new NativeMenuItem();
         _muteItem.Click += (_, _) => ToggleMute();

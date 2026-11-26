@@ -20,6 +20,7 @@ public sealed class MainWindow : Window
 
     private readonly MacController _controller;
     private readonly DispatcherTimer _statusTimer = new() { Interval = TimeSpan.FromMilliseconds(200) };
+    private readonly DispatcherTimer _waitingTimer = new() { Interval = TimeSpan.FromSeconds(30) };
     private readonly ObservableCollection<string> _log = [];
 
     private readonly TextBlock _title = new() { FontSize = 24, FontWeight = FontWeight.SemiBold };
@@ -53,6 +54,10 @@ public sealed class MainWindow : Window
     private readonly CheckBox _permissionPopup = new();
     private readonly CheckBox _startAtLogin = new();
     private readonly TextBlock _saveStatus = Ui.Note("");
+    private readonly StackPanel _waitingList = new();
+    private readonly TabItem _waitingTab = new();
+    private readonly WaitingCards _waitingCards;
+    private TabControl _tabs = new();
     private List<string> _sessionTitles = [];
     private bool _retired;
 
@@ -68,16 +73,29 @@ public sealed class MainWindow : Window
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
 
         _setupCard = BuildSetup();
-        Content = new TabControl
+        _waitingCards = new WaitingCards(() => GetTopLevel(this), controller.Board, controller.Permissions, controller.Log.Add);
+        _waitingTab.Content = Scroll(new StackPanel
+        {
+            Children =
+            {
+                Ui.Note(L.T("İzin isteyen, soru soran ve işini bitirip seni bekleyen oturumlar. Oturum yeniden çalışınca kart kendiliğinden kalkar.")),
+                _waitingList,
+            },
+        });
+        _tabs = new TabControl
         {
             Margin = new Thickness(12),
             ItemsSource = new[]
             {
                 new TabItem { Header = L.T("Durum"), Content = Scroll(BuildStatus()) },
+                _waitingTab,
                 new TabItem { Header = L.T("Ayarlar"), Content = Scroll(BuildSettings()) },
                 new TabItem { Header = L.T("Günlük"), Content = BuildLog() },
             },
         };
+        Content = _tabs;
+        _controller.Board.Changed += OnBoardChanged;
+        RefreshWaiting();
 
         foreach (var entry in _controller.Log.Recent())
             _log.Insert(0, Format(entry));
@@ -85,6 +103,8 @@ public sealed class MainWindow : Window
         _controller.Log.Cleared += OnLogCleared;
 
         _statusTimer.Tick += (_, _) => RefreshStatus();
+        _waitingTimer.Tick += (_, _) => RefreshWaiting();
+        _waitingTimer.Start();
         _statusTimer.Start();
         RefreshStatus();
         LoadSettings();
@@ -103,10 +123,23 @@ public sealed class MainWindow : Window
     public void Retire()
     {
         _statusTimer.Stop();
+        _waitingTimer.Stop();
+        _controller.Board.Changed -= OnBoardChanged;
         _controller.Log.Added -= OnLogAdded;
         _controller.Log.Cleared -= OnLogCleared;
         _retired = true;
         Close();
+    }
+
+    public void ShowWaiting() => _tabs.SelectedItem = _waitingTab;
+
+    private void OnBoardChanged() => Dispatcher.UIThread.Post(RefreshWaiting);
+
+    private void RefreshWaiting()
+    {
+        var count = _controller.Board.Count;
+        _waitingTab.Header = count == 0 ? L.T("Bekleyenler") : $"{L.T("Bekleyenler")} · {count}";
+        _waitingCards.Fill(_waitingList);
     }
 
     private static ScrollViewer Scroll(Control content) => new() { Content = content, Padding = new Thickness(4, 12, 12, 12) };

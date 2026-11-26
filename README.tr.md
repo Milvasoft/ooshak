@@ -27,6 +27,7 @@ Ooshak bir topluluk projesidir. Anthropic tarafından yapılmamış, onaylanmam�
 - **Her oturuma gönderim.** Adıyla veya takma adıyla seslenirsin, ya da son oturumla konuşmaya devam edersin. Mesaj Claude masaüstü uygulamasına klavye odağını çalmadan yazılır.
 - **Sesli cevaplar.** Oturumlar dinlenmek için yazılmış kısa bir satırla cevap verir, yerel Piper sesi okur. Hangi oturumların konuşacağını seçersin; yalnızca seslendiklerin, hepsi ya da tek bir aracı oturum.
 - **Senin gibi konuşur.** İngilizce teknik terimli Türkçe ("branch'i merge et") doğru yazılır, Türkçe ses İngilizce kelimeleri doğru okur.
+- **Bekleyen oturumlar tek bakışta.** İzin isteyen, soru soran ya da işini bitirip seni bekleyen her oturum proje proje tek sayfada: kartta **İzin ver** ve **Reddet**, Claude'da açma ve kopyalanabilir `claude --resume` komutu.
 - **İzin popup'ı.** Bir oturum onay istediğinde tam komut **İzin ver** ve **Reddet** düğmeleriyle görünür. Yalnızca fare tıklamasını kabul eder, başka yerde yazarken yanlışlıkla onay verilemez.
 - **Yüzen ada.** Sesinle dalgalanan, Ooshak konuşurken turkuaza dönen, sürüklenebilir küçük bir kapsül.
 - **Kibar.** Cevaplar sen susunca okunur, "Uşak dur" ve "Uşak devam et" okuma sırasında da çalışır, tam ekran oyun ve videoda Ooshak susar.
@@ -44,7 +45,7 @@ Ooshak bir topluluk projesidir. Anthropic tarafından yapılmamış, onaylanmam�
 1. [Releases](https://github.com/Milvasoft/ooshak/releases) sayfasından `Ooshak-Setup-<sürüm>-x64.exe` dosyasını indirip çalıştır. Yalnızca senin kullanıcın için kurulur, yönetici yetkisi istemez.
    Kurulum dosyası henüz imzalı değil, Windows SmartScreen uyarabilir. **Ek bilgi → Yine de çalıştır** de, istersen önce `SHA256SUMS.txt` ile karşılaştır.
 2. İlk açılışta **Modelleri indir**'e bas. Ooshak yaklaşık 1,8 GB'ı bir kez Hugging Face ve GitHub'dan indirir. Her dosya sabit bir sürüme bağlıdır ve SHA-256 ile doğrulanır.
-3. **Claude Code'a bağla**'ya bas. Bu, `%USERPROFILE%\.claude\settings.json` dosyasına üç hook ekler (yanına yedek alınır). Ayarlar'dan istediğin zaman kaldırabilirsin, kaldırma işlemi de bunları siler.
+3. **Claude Code'a bağla**'ya bas. Bu, `%USERPROFILE%\.claude\settings.json` dosyasına altı hook ekler (yanına yedek alınır). Ayarlar'dan istediğin zaman kaldırabilirsin, kaldırma işlemi de bunları siler.
 4. İstersen **Ayarlar → Sesimle öğret** ile çağrı adını üç kez söyle.
 
 ## macOS (ön sürüm)

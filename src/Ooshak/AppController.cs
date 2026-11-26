@@ -1,4 +1,4 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Media;
 using System.Windows.Threading;
 using Microsoft.Win32;
@@ -43,6 +43,7 @@ public sealed class AppController : IDisposable
     public LogBook Log { get; }
     public OoshakConfig Config { get; }
     public PermissionBroker Permissions { get; } = new();
+    public SessionBoard Board { get; } = new(SessionBoard.DefaultPath);
     public VoiceLoop? Loop { get; private set; }
     public string? StartError { get; private set; }
     public bool IsStarting { get; private set; } = true;
@@ -51,6 +52,7 @@ public sealed class AppController : IDisposable
     public async Task StartAsync(bool hidden)
     {
         L.Language = Config.Language;
+        UpgradeHooks();
         BuildTray();
         _tray.DoubleClick += (_, _) => ShowMain();
 
@@ -125,6 +127,12 @@ public sealed class AppController : IDisposable
 
         _main.Activate();
         UpdateIsland();
+    }
+
+    public void ShowWaiting()
+    {
+        ShowMain();
+        _main?.ShowWaiting();
     }
 
     /// <summary>The island stands in for the main window whenever that window is out of sight.</summary>
@@ -230,7 +238,7 @@ public sealed class AppController : IDisposable
         {
             Loop = await Task.Run(() =>
             {
-                var loop = new VoiceLoop(Config, Log, Permissions);
+                var loop = new VoiceLoop(Config, Log, Permissions, Board);
                 loop.Start();
                 return loop;
             });
@@ -244,6 +252,23 @@ public sealed class AppController : IDisposable
         finally
         {
             IsStarting = false;
+        }
+    }
+
+    /// <summary>Adds the hooks a newer version needs to a settings file that an older one connected.</summary>
+    private void UpgradeHooks()
+    {
+        try
+        {
+            if (HookInstaller.HasAny() && !HookInstaller.IsInstalled())
+            {
+                HookInstaller.Install(Config.Port);
+                Log.Add(L.T("Claude Code bağlantısı güncellendi."));
+            }
+        }
+        catch (Exception e) when (e is System.IO.IOException or UnauthorizedAccessException or System.Text.Json.JsonException)
+        {
+            Log.Add(e.Message);
         }
     }
 
@@ -270,6 +295,7 @@ public sealed class AppController : IDisposable
         var menu = new Forms.ContextMenuStrip();
         _muteItem = new Forms.ToolStripMenuItem();
         menu.Items.Add(L.T("Ooshak'ı aç"), null, (_, _) => ShowMain());
+        menu.Items.Add(L.T("Bekleyen oturumlar"), null, (_, _) => ShowWaiting());
         _muteItem.Click += (_, _) => ToggleMute();
         menu.Items.Add(_muteItem);
         menu.Items.Add(L.T("Okumayı durdur veya sürdür") + "  (Ctrl+Alt+S)", null, (_, _) => ToggleReading());

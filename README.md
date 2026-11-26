@@ -37,6 +37,7 @@ Ooshak is a community project. It is not made, endorsed or supported by Anthropi
 - **Send to any session.** Speak to a session by name or alias, or keep talking to the last one. Messages are typed into the Claude desktop app through UI Automation, without stealing keyboard focus.
 - **Spoken replies.** Sessions answer with a short line meant to be heard, read by a local Piper voice. Choose which sessions may speak, from only the ones you addressed to all of them or a single go-between session.
 - **Talks like you do.** Turkish with English technical terms ("branch'i merge et") is transcribed correctly, and English words are pronounced correctly by the Turkish voice.
+- **Waiting sessions at a glance.** One page lists every session that asked for permission, asked a question or finished and waits for you, grouped by project, with Allow and Deny, Open in Claude, and a copyable `claude --resume` command.
 - **Permission popup.** When a session needs approval, a popup shows the exact command with Allow and Deny. It only accepts mouse clicks, so typing elsewhere can never approve anything.
 - **Floating island.** A small draggable capsule whose liquid ripples with your voice and turns teal while Ooshak speaks.
 - **Polite.** Replies wait until you stop talking, "Ooshak, pause" and "Ooshak, continue" work mid-sentence, and Ooshak goes quiet while a game or video is full screen.
@@ -55,7 +56,7 @@ Ooshak is a community project. It is not made, endorsed or supported by Anthropi
 1. Download `Ooshak-Setup-<version>-x64.exe` from [Releases](https://github.com/Milvasoft/ooshak/releases) and run it. It installs for the current user only and needs no administrator rights.
    The installer is not code-signed yet, so Windows SmartScreen may warn you. Choose **More info → Run anyway**, or check the file against `SHA256SUMS.txt` first.
 2. On first start, choose **Download models**. Ooshak downloads about 1.8 GB once from Hugging Face and GitHub. Every file is pinned to a fixed revision and verified by SHA-256.
-3. Choose **Connect to Claude Code**. This adds three hooks to `%USERPROFILE%\.claude\settings.json` (a backup is saved next to it) so Ooshak can hear when a session finishes or needs permission. You can disconnect in Settings at any time; uninstalling removes them too.
+3. Choose **Connect to Claude Code**. This adds six hooks to `%USERPROFILE%\.claude\settings.json` (a backup is saved next to it) so Ooshak can hear when a session finishes or needs permission. You can disconnect in Settings at any time; uninstalling removes them too.
 4. Optionally open **Settings → Teach with my voice** and say your wake name three times.
 
 ## macOS (preview)

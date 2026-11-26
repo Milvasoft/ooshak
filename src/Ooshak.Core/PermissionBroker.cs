@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 
 namespace Ooshak.Core;
 
@@ -37,9 +37,11 @@ public sealed class PermissionBroker
     }
 
     /// <returns>True to allow, false to deny, null when nobody answered in time.</returns>
-    public async Task<bool?> AskAsync(string session, string detail, TimeSpan timeout)
+    /// <param name="created">Gets the request before it is shown, so other views can answer it too.</param>
+    public async Task<bool?> AskAsync(string session, string detail, TimeSpan timeout, Action<PermissionRequest>? created = null)
     {
         var request = new PermissionRequest(session, detail);
+        created?.Invoke(request);
         lock (_gate)
             _pending.Add(request);
 

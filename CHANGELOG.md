@@ -2,6 +2,13 @@
 
 All notable changes to Ooshak are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.3.0] - 2026-11-26
+
+### Added
+
+- A **Waiting** page lists every Claude Code session that needs you, grouped by project: permission requests with Allow and Deny right on the card, questions a session asked, and sessions that finished and wait for your next message. Cards show how long they have waited, open the session in the Claude app, copy its `claude --resume` command, and go away by themselves when the session gets back to work. Terminal sessions are listed too. The tray and menu bar menus open the page directly.
+- Ooshak now also listens to the `UserPromptSubmit`, `PostToolUse` and `SessionEnd` hooks to know when a session is working again. An existing connection is updated on the next start.
+
 ## [0.2.0] - 2026-11-19
 
 ### Added
@@ -47,6 +54,7 @@ First public preview.
 - First-run model download with pinned revisions and SHA-256 checks.
 - Per-user Windows installer.
 
+[0.3.0]: https://github.com/Milvasoft/ooshak/releases/tag/v0.3.0
 [0.2.0]: https://github.com/Milvasoft/ooshak/releases/tag/v0.2.0
 [0.1.2]: https://github.com/Milvasoft/ooshak/releases/tag/v0.1.2
 [0.1.1]: https://github.com/Milvasoft/ooshak/releases/tag/v0.1.1

@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Text.Json;
 using System.Threading.Channels;
 
@@ -35,6 +35,7 @@ public sealed class VoiceLoop : IDisposable
     private readonly OoshakConfig _config;
     private readonly LogBook _log;
     private readonly PermissionBroker _permissions;
+    private readonly SessionBoard? _board;
     private readonly Channel<(float[] Samples, bool OverSpeech)> _utterances = Channel.CreateUnbounded<(float[] Samples, bool OverSpeech)>();
     private readonly ConcurrentDictionary<string, string> _awaitingReply = new();
     private readonly ConcurrentDictionary<string, byte> _instructed = new();
@@ -60,11 +61,12 @@ public sealed class VoiceLoop : IDisposable
     private (string? Text, DateTimeOffset Until) _note;
     private string? _lastCommand;
 
-    public VoiceLoop(OoshakConfig config, LogBook log, PermissionBroker permissions)
+    public VoiceLoop(OoshakConfig config, LogBook log, PermissionBroker permissions, SessionBoard? board = null)
     {
         _config = config;
         _log = log;
         _permissions = permissions;
+        _board = board;
         _router = new VoiceRouter(config.WakeNames, TimeSpan.FromSeconds(config.ConversationSeconds));
         _router.SetEnglish(config.Language == L.English);
         _transcriber = new Transcriber(config.ModelPath(config.WhisperModel), config.Language);
@@ -350,11 +352,15 @@ public sealed class VoiceLoop : IDisposable
         var title = SessionCatalog.Load().FirstOrDefault(s => s.CliSessionId == sessionId)?.Title;
 
         if (!_config.PermissionPopup || title is null || PermissionText.NeedsTheApp(tool))
+        {
+            _board?.OnPermission(payload, null);
             return null;
+        }
 
         var input = payload.TryGetProperty("tool_input", out var value) ? value : default;
         var detail = PermissionText.Detail(tool, input);
-        var allowed = await _permissions.AskAsync(SpokenName(title), detail, PermissionTimeout);
+        var allowed = await _permissions.AskAsync(SpokenName(title), detail, PermissionTimeout, r => _board?.OnPermission(payload, r));
+        _board?.Answered(sessionId, allowed);
 
         _log.Add(L.T(allowed switch
         {
@@ -368,6 +374,7 @@ public sealed class VoiceLoop : IDisposable
 
     private void OnHook(string route, JsonElement payload)
     {
+        _board?.OnHook(route, payload);
         var sessionId = payload.TryGetProperty("session_id", out var id) ? id.GetString() ?? "" : "";
 
         var voiceStarted = _awaitingReply.TryGetValue(sessionId, out var title);

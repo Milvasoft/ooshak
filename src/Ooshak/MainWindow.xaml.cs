@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
@@ -34,6 +34,8 @@ public partial class MainWindow : Window
     private readonly DispatcherTimer _statusTimer = new() { Interval = TimeSpan.FromMilliseconds(150) };
     private readonly ObservableCollection<LogEntry> _log = [];
     private readonly ObservableCollection<AliasRow> _aliases = [];
+    private readonly DispatcherTimer _waitingTimer = new() { Interval = TimeSpan.FromSeconds(30) };
+    private readonly WaitingCards _waitingCards;
     private readonly List<string> _enrolled = [];
     private IReadOnlyList<string> _sessionTitles = [];
     private bool _retired;
@@ -45,6 +47,11 @@ public partial class MainWindow : Window
         _controller = controller;
 
         HeroLiquid.Source = controller.LiquidFrame;
+        _waitingCards = new WaitingCards(this, controller.Board, controller.Permissions, controller.Log.Add);
+        controller.Board.Changed += OnBoardChanged;
+        _waitingTimer.Tick += (_, _) => RefreshWaiting();
+        _waitingTimer.Start();
+        RefreshWaiting();
         LogList.ItemsSource = _log;
         AliasList.ItemsSource = _aliases;
 
@@ -76,6 +83,8 @@ public partial class MainWindow : Window
     {
         _retired = true;
         _statusTimer.Stop();
+        _waitingTimer.Stop();
+        _controller.Board.Changed -= OnBoardChanged;
         _controller.Log.Added -= OnLogAdded;
         Close();
     }
@@ -189,6 +198,7 @@ public partial class MainWindow : Window
         PageHome.Visibility = NavHome.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         PageSettings.Visibility = NavSettings.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         PageLog.Visibility = NavLog.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        PageWaiting.Visibility = NavWaiting.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
 
         if (NavSettings.IsChecked == true)
             LoadSettings();
@@ -454,6 +464,20 @@ public partial class MainWindow : Window
         if (PageLog.IsVisible)
             LogList.ScrollIntoView(entry);
     });
+
+    private void OnBoardChanged() => Dispatcher.BeginInvoke(RefreshWaiting);
+
+    /// <summary>Rebuilds the cards and puts the count next to the page name.</summary>
+    private void RefreshWaiting()
+    {
+        var count = _controller.Board.Count;
+        NavWaiting.Content = count == 0 ? L.T("Bekleyenler") : $"{L.T("Bekleyenler")}  ·  {count}";
+        WaitingEmpty.Visibility = count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        _waitingCards.Fill(WaitingList);
+    }
+
+    /// <summary>Opens the window on the waiting sessions page.</summary>
+    public void ShowWaiting() => NavWaiting.IsChecked = true;
 
     private void RefreshLogEmpty() =>
         LogEmpty.Visibility = _log.Count == 0 ? Visibility.Visible : Visibility.Collapsed;

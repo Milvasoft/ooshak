@@ -10,7 +10,8 @@ public static class HookInstaller
     private const string PermissionEvent = "PermissionRequest";
     private const int PermissionWaitSeconds = 60;
     private const int PermissionHookTimeoutSeconds = 65;
-    private static readonly string[] Events = ["Stop", "Notification", PermissionEvent];
+    // The last three only tell the waiting list that a session is working again.
+    private static readonly string[] Events = ["Stop", "Notification", PermissionEvent, "UserPromptSubmit", "PostToolUse", "SessionEnd"];
 
     public static string SettingsPath => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".claude", "settings.json");
@@ -26,8 +27,11 @@ public static class HookInstaller
     public static string PermissionCommand(int port) =>
         $"{Curl} -s -m {PermissionWaitSeconds} -X POST -H \"{Marker}: 1\" --data-binary \"@-\" http://localhost:{port}/{HookServer.PermissionRoute}; exit 0";
 
+    /// <summary>True when every current hook is in place; an older install lacks the newer events.</summary>
     public static bool IsInstalled() =>
-        File.Exists(SettingsPath) && File.ReadAllText(SettingsPath).Contains($"/{HookServer.PermissionRoute}", StringComparison.Ordinal);
+        File.Exists(SettingsPath) && File.ReadAllText(SettingsPath) is var text
+        && text.Contains($"/{HookServer.PermissionRoute}", StringComparison.Ordinal)
+        && text.Contains("/posttooluse", StringComparison.Ordinal);
 
     /// <summary>True when any Ooshak hook, from this or an older version, is in the settings.</summary>
     public static bool HasAny() =>

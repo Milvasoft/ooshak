@@ -1,4 +1,4 @@
-<Window x:Class="Ooshak.MainWindow"
+﻿<Window x:Class="Ooshak.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:Ooshak"
@@ -34,6 +34,7 @@
 
                 <StackPanel Grid.Row="1" WindowChrome.IsHitTestVisibleInChrome="True">
                     <RadioButton x:Name="NavHome" Style="{StaticResource NavItem}" Content="{local:T 'Durum'}" Tag="&#xE720;" IsChecked="True" GroupName="Nav" Checked="OnNavigate" />
+                    <RadioButton x:Name="NavWaiting" Style="{StaticResource NavItem}" Content="{local:T 'Bekleyenler'}" Tag="&#xE823;" GroupName="Nav" Checked="OnNavigate" />
                     <RadioButton x:Name="NavSettings" Style="{StaticResource NavItem}" Content="{local:T 'Ayarlar'}" Tag="&#xE713;" GroupName="Nav" Checked="OnNavigate" />
                     <RadioButton x:Name="NavLog" Style="{StaticResource NavItem}" Content="{local:T 'Günlük'}" Tag="&#xE8FD;" GroupName="Nav" Checked="OnNavigate" />
                 </StackPanel>
@@ -318,6 +319,24 @@
                         <Button Style="{StaticResource PrimaryAction}" HorizontalAlignment="Right" Content="{local:T 'Kaydet'}" Click="OnSaveSettings" />
                     </Grid>
                 </Border>
+            </Grid>
+
+            <!-- Bekleyenler -->
+            <Grid x:Name="PageWaiting" Grid.Row="1" Margin="30,0,0,0" Visibility="Collapsed">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <StackPanel Margin="0,0,30,16">
+                    <TextBlock Text="{local:T 'Bekleyenler'}" Style="{StaticResource PageTitle}" />
+                    <TextBlock Style="{StaticResource Hint}" Margin="0,4,0,0" Text="{local:T 'İzin isteyen, soru soran ve işini bitirip seni bekleyen oturumlar. Oturum yeniden çalışınca kart kendiliğinden kalkar.'}" />
+                </StackPanel>
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="0,0,30,26">
+                    <Grid>
+                        <StackPanel x:Name="WaitingList" />
+                        <TextBlock x:Name="WaitingEmpty" Style="{StaticResource Hint}" HorizontalAlignment="Center" Margin="0,80,0,0" Text="{local:T 'Şu an seni bekleyen oturum yok.'}" />
+                    </Grid>
+                </ScrollViewer>
             </Grid>
 
             <!-- Günlük -->
