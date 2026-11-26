@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
@@ -52,6 +52,8 @@ public sealed class MainWindow : Window
     private readonly Slider _rate = new() { Minimum = Speaker.MinRate, Maximum = Speaker.MaxRate, Width = 260 };
     private readonly TextBlock _rateValue = new() { Foreground = Ui.Muted, VerticalAlignment = VerticalAlignment.Center };
     private readonly CheckBox _permissionPopup = new();
+    private readonly CheckBox _announce = new();
+    private readonly CheckBox _acks = new();
     private readonly CheckBox _startAtLogin = new();
     private readonly TextBlock _saveStatus = Ui.Note("");
     private readonly StackPanel _waitingList = new();
@@ -226,6 +228,8 @@ public sealed class MainWindow : Window
         };
 
         _permissionPopup.Content = L.T("İzinleri popup ile sor");
+        _announce.Content = L.T("İzin ve soruları sesle sor");
+        _acks.Content = L.T("Sesli onay");
         _startAtLogin.Content = L.T("Oturum açınca başlat");
 
         var speech = Ui.Section(
@@ -244,6 +248,8 @@ public sealed class MainWindow : Window
 
         var app = Ui.Section(
             _permissionPopup,
+            _announce,
+            _acks,
             _startAtLogin,
             Ui.Note(L.T("Takma adlar, okunuşlar ve teknik kelimeler ayar dosyasında: ~/.ooshak/config.json")),
             Ui.Row(
@@ -402,6 +408,8 @@ public sealed class MainWindow : Window
         _rate.Value = config.SpeechRate;
         _rateValue.Text = $"{config.SpeechRate:0.00}x";
         _permissionPopup.IsChecked = config.PermissionPopup;
+        _announce.IsChecked = config.AnnounceRequests;
+        _acks.IsChecked = config.SpokenAcknowledgements;
         _startAtLogin.IsChecked = LoginItem.Enabled;
         _saveStatus.Text = "";
     }
@@ -446,6 +454,8 @@ public sealed class MainWindow : Window
         config.GeneralSessionTitle = general is not null && general != L.T(NoGeneralSession) ? general : "";
         config.SpeechRate = _rate.Value;
         config.PermissionPopup = _permissionPopup.IsChecked == true;
+        config.AnnounceRequests = _announce.IsChecked == true;
+        config.SpokenAcknowledgements = _acks.IsChecked == true;
         config.Language = language;
         config.Save();
 

@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -8,8 +8,10 @@ namespace Ooshak.Core;
 public static class FullscreenDetector
 {
     private const int MonitorDefaultToNearest = 2;
+    // QUERY_USER_NOTIFICATION_STATE: 3 is a Direct3D full-screen app, 4 presentation mode.
+    // 5 means notifications are accepted, the everyday state, and must never pause Ooshak.
     private const int StateD3dFullscreen = 3;
-    private const int StatePresentation = 5;
+    private const int StatePresentation = 4;
     private const int GwlStyle = -16;
     private const int WsCaption = 0x00C00000;
 
@@ -18,7 +20,7 @@ public static class FullscreenDetector
 
     public static bool IsActive()
     {
-        if (SHQueryUserNotificationState(out var state) == 0 && state is StateD3dFullscreen or StatePresentation)
+        if (SHQueryUserNotificationState(out var state) == 0 && IsFullscreenState(state))
             return true;
 
         var window = GetForegroundWindow();
@@ -32,6 +34,8 @@ public static class FullscreenDetector
         var style = GetWindowLongW(window, GwlStyle);
         return LooksFullscreen(Covers(bounds.ToTuple(), monitor.Bounds.ToTuple()), IsZoomed(window), (style & WsCaption) == WsCaption);
     }
+
+    public static bool IsFullscreenState(int state) => state is StateD3dFullscreen or StatePresentation;
 
     /// <summary>
     /// With an auto-hiding taskbar a maximized window covers the whole monitor too, so covering

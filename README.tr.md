@@ -77,6 +77,8 @@ Windows'tan farkları:
 | "Uşak sus" | Okumayı keser, sıradakileri siler |
 | "Uşak, bana patron de" | Oturumlar sana "patron" diye hitap eder |
 | "Uşak, neredesin?" | O anki oturumu söyler |
+| "Uşak, ne durumdayız?" | Kimin seni beklediğini, kimin hâlâ çalıştığını özetler |
+| "Evet" / "Hayır" / seçeneğin adı | Ooshak'ın az önce okuduğu izne ya da soruya cevap verir |
 
 Kısayollar: **Ctrl+Alt+M** mikrofonu açar ve kapatır, **Ctrl+Alt+S** okumayı duraklatır ve sürdürür.
 

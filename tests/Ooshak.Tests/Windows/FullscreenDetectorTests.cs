@@ -1,4 +1,4 @@
-using Ooshak.Core;
+﻿using Ooshak.Core;
 
 namespace Ooshak.Tests;
 
@@ -33,6 +33,15 @@ public class FullscreenDetectorTests
     [Fact]
     public void A_borderless_window_that_does_not_cover_is_not_full_screen() =>
         Assert.False(FullscreenDetector.LooksFullscreen(coversMonitor: false, maximized: false, hasTitleBar: false));
+
+    [Theory]
+    [InlineData(3, true)]
+    [InlineData(4, true)]
+    [InlineData(5, false)]
+    [InlineData(1, false)]
+    [InlineData(6, false)]
+    public void Only_full_screen_and_presentation_states_count(int state, bool expected) =>
+        Assert.Equal(expected, FullscreenDetector.IsFullscreenState(state));
 
     [Fact]
     public void A_small_window_does_not_count() =>

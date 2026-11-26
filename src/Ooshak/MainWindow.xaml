@@ -298,6 +298,20 @@
                                     <CheckBox x:Name="PermissionSwitch" Style="{StaticResource Switch}" HorizontalAlignment="Right" VerticalAlignment="Center" AutomationProperties.Name="{local:T 'İzinleri popup ile sor'}" />
                                 </Grid>
                                 <Grid Margin="0,0,0,14">
+                                    <StackPanel Margin="0,0,70,0">
+                                        <TextBlock Text="{local:T 'İzin ve soruları sesle sor'}" Style="{StaticResource CardTitle}" />
+                                        <TextBlock Style="{StaticResource Hint}" Margin="0,3,0,0" Text="{local:T 'Ooshak isteği okur; çağrı adı olmadan “evet”, “hayır” ya da seçeneğin adıyla cevap verirsin.'}" />
+                                    </StackPanel>
+                                    <CheckBox x:Name="AnnounceSwitch" Style="{StaticResource Switch}" HorizontalAlignment="Right" VerticalAlignment="Center" AutomationProperties.Name="{local:T 'İzin ve soruları sesle sor'}" />
+                                </Grid>
+                                <Grid Margin="0,0,0,14">
+                                    <StackPanel Margin="0,0,70,0">
+                                        <TextBlock Text="{local:T 'Sesli onay'}" Style="{StaticResource CardTitle}" />
+                                        <TextBlock Style="{StaticResource Hint}" Margin="0,3,0,0" Text="{local:T 'Mesaj gidince bip yerine “Tamam, Atlas hallediyor” der.'}" />
+                                    </StackPanel>
+                                    <CheckBox x:Name="AckSwitch" Style="{StaticResource Switch}" HorizontalAlignment="Right" VerticalAlignment="Center" AutomationProperties.Name="{local:T 'Sesli onay'}" />
+                                </Grid>
+                                <Grid Margin="0,0,0,14">
                                     <TextBlock Text="{local:T 'Windows ile başlat'}" Style="{StaticResource CardTitle}" VerticalAlignment="Center" />
                                     <CheckBox x:Name="AutostartSwitch" Style="{StaticResource Switch}" HorizontalAlignment="Right" VerticalAlignment="Center" AutomationProperties.Name="{local:T 'Windows ile başlat'}" />
                                 </Grid>

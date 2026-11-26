@@ -240,6 +240,8 @@ public partial class MainWindow : Window
         IslandSwitch.IsChecked = config.IslandEnabled;
         AutoPauseSwitch.IsChecked = config.AutoPauseFullscreen;
         PermissionSwitch.IsChecked = config.PermissionPopup;
+        AnnounceSwitch.IsChecked = config.AnnounceRequests;
+        AckSwitch.IsChecked = config.SpokenAcknowledgements;
         AutostartSwitch.IsChecked = AppController.StartsWithWindows;
         SaveStatus.Text = "";
 
@@ -313,6 +315,8 @@ public partial class MainWindow : Window
         config.IslandEnabled = IslandSwitch.IsChecked == true;
         config.AutoPauseFullscreen = AutoPauseSwitch.IsChecked == true;
         config.PermissionPopup = PermissionSwitch.IsChecked == true;
+        config.AnnounceRequests = AnnounceSwitch.IsChecked == true;
+        config.SpokenAcknowledgements = AckSwitch.IsChecked == true;
         // Compared with what was shown, so an open page cannot undo a name set by voice meanwhile.
         var address = VoiceRouter.NormalizeAddress(AddressBox.Text.Trim());
         AddressBox.Text = address;

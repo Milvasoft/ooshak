@@ -4,11 +4,19 @@ All notable changes to Ooshak are listed here. The format follows [Keep a Change
 
 ## [0.3.0] - 2026-11-26
 
+### Fixed
+
+- Ooshak paused itself almost all the time: Windows' everyday "accepts notifications" state was taken for presentation mode, so listening and reading stopped as if a full-screen game were running. Only full-screen Direct3D apps and real presentation mode pause it now.
+
 ### Added
 
 - A **Waiting** page lists every Claude Code session that needs you, grouped by project: permission requests with Allow and Deny right on the card, questions a session asked, and sessions that finished and wait for your next message. Cards show how long they have waited, open the session in the Claude app (a terminal session offers its `claude --resume` command instead), and go away by themselves when the session gets back to work. Terminal sessions are listed too. The tray and menu bar menus open the page directly.
 - Questions a session asks (AskUserQuestion) show their options as buttons, in the popup and on the card. One click answers a single question; several questions or multiple choice are picked and sent with Answer. "Answer in Claude" leaves the question to Claude's own window.
 - A message for a busy session is no longer dropped with "I couldn't send the message". If the session is working, waiting for a permission or a question, or you are typing, Ooshak says so in one sentence, keeps the message and delivers it as soon as the session is free, for up to ten minutes.
+- Ooshak reads permission requests and questions out loud ("Atlas wants permission to run a command. Approve?"). Answer "yes", "no" or an option's name within 15 seconds without the wake name, or later with it. Speech that starts while Ooshak talks needs the wake name, so its own voice can never approve anything. Every voice decision is logged with what was heard.
+- "Ooshak, what's the status?" ("Uşak, ne durumdayız?") sums up who needs you and who is still working.
+- A delivered message gets a short spoken "On it, Atlas has it" instead of a beep; it names the session only when it changed. Both this and the read-out requests can be turned off in Settings.
+- Sessions are asked to end voice replies like a personal assistant: the outcome first, two short sentences, no code, paths or ids. A saved older default instruction picks up the new one.
 - Ooshak now also listens to the `UserPromptSubmit`, `PostToolUse` and `SessionEnd` hooks to know when a session is working again. An existing connection is updated on the next start.
 
 ## [0.2.0] - 2026-11-19

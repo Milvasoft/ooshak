@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text;
 
 namespace Ooshak.Core;
@@ -14,6 +14,7 @@ public abstract record RouteResult
     public sealed record SwitchTo(string Title) : RouteResult;
     public sealed record Send(string Title, string Text) : RouteResult;
     public sealed record SetAddress(string Name) : RouteResult;
+    public sealed record Status : RouteResult;
 }
 
 /// <summary>Turns one transcribed sentence into an action. Holds the sticky target session.</summary>
@@ -35,6 +36,16 @@ public sealed class VoiceRouter
     private static readonly HashSet<string> EnglishPauseWords = ["pause", "wait", "hold"];
     private static readonly HashSet<string> EnglishResumeWords = ["continue", "resume", "go"];
     private static readonly HashSet<string> WhereWords = ["neredesin", "neredeyiz", "hangisindesin"];
+    private static readonly HashSet<string> StatusPhrases =
+    [
+        "durum", "durum ne", "durum nedir", "durumlar ne", "ne durumdayiz", "neler oluyor", "ne var ne yok",
+        "bekleyen var mi", "kim bekliyor", "ozet", "ozet gec", "ozetle", "durum raporu",
+    ];
+    private static readonly HashSet<string> EnglishStatusPhrases =
+    [
+        "status", "whats the status", "what is the status", "whats up", "whats going on", "any updates",
+        "who is waiting", "whos waiting", "give me a status", "status report", "sitrep",
+    ];
     private static readonly HashSet<string> NotAddressWords = ["merhaba", "selam", "gunaydin", "tamam", "evet", "hayir", "naber", "back", "later", "when", "if", "after", "maybe"];
     private static readonly HashSet<string> EnglishStopWords = ["stop", "quiet", "enough", "silence", "shush", "shut"];
     private static readonly HashSet<string> EnglishWherePhrases = ["where are you", "which session", "which session are you in", "what session are you in"];
@@ -181,6 +192,10 @@ public sealed class VoiceRouter
 
         if (_english ? EnglishWherePhrases.Contains(string.Join(' ', keys[start..])) : remaining <= MaxStopTokens && WhereWords.Contains(keys[start]))
             return new RouteResult.WhereAmI(CurrentTitle);
+
+        // Asked of Ooshak itself, so it wins over the go-between and the sticky session.
+        if ((_english ? EnglishStatusPhrases : StatusPhrases).Contains(string.Join(' ', keys[start..])))
+            return new RouteResult.Status();
 
         if ((_english ? EnglishAddressName(tokens, keys, start) : TurkishAddressName(tokens, keys, start)) is { } address)
             return new RouteResult.SetAddress(address);

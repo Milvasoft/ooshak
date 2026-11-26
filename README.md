@@ -88,6 +88,8 @@ Differences from Windows:
 | "Ooshak, stop" | Stops reading and drops queued replies |
 | "Ooshak, call me boss" | Sessions will address you as "boss" |
 | "Ooshak, where are you?" | Tells you the current session |
+| "Ooshak, what's the status?" | Sums up who needs you and who is still working |
+| "Yes" / "No" / an option's name | Answers the permission or question Ooshak just read out |
 
 In Turkish: "Uşak, Atlas'a söyle testleri çalıştırsın", "Uşak, Atlas'a geç", "Uşak dur", "Uşak devam et", "Uşak sus", "Uşak, bana patron de".
 

@@ -70,18 +70,24 @@ public sealed class OoshakConfig
     public string VoiceReplyInstruction { get; set; } = TurkishInstruction;
 
     private const string TurkishInstruction =
-        "[Sesli mod: 🎙 ile başlayan mesajlara cevabının son satırını 🔊 ile başlat; orada kişisel asistan gibi, en fazla iki cümle, kod ve liste olmadan konuş.]";
+        "[Sesli mod: 🎙 ile başlayan mesajlara cevabının son satırını 🔊 ile başlat. O satırı Jarvis gibi söyle: önce sonuç, sonra gerekirse tek bir soru; en fazla iki kısa cümle, doğal ve samimi; kod, liste, dosya yolu ve kimlik numarası yok.]";
 
     private const string EnglishInstruction =
-        "[Voice mode: for messages starting with 🎙, begin the last line of your reply with 🔊; there, speak like a personal assistant in English, two sentences at most, no code or lists.]";
+        "[Voice mode: for messages starting with 🎙, begin the last line of your reply with 🔊. Say that line like Jarvis, in English: the outcome first, then one question if needed; two short sentences at most, natural and warm; no code, lists, file paths or ids.]";
+
+    // Earlier built-in texts: a config that still holds one gets the current text, not a frozen copy.
+    private static readonly HashSet<string> PreviousInstructions =
+    [
+        "[Sesli mod: 🎙 ile başlayan mesajlara cevabının son satırını 🔊 ile başlat; orada kişisel asistan gibi, en fazla iki cümle, kod ve liste olmadan konuş.]",
+        "[Voice mode: for messages starting with 🎙, begin the last line of your reply with 🔊; there, speak like a personal assistant in English, two sentences at most, no code or lists.]",
+        TurkishInstruction,
+        EnglishInstruction,
+    ];
 
     /// <summary>The instruction for the current language. A customized text is left as written.</summary>
-    public string ReplyInstruction() => (Language, VoiceReplyInstruction) switch
-    {
-        (L.English, TurkishInstruction) => EnglishInstruction,
-        (L.Turkish, EnglishInstruction) => TurkishInstruction,
-        _ => VoiceReplyInstruction,
-    };
+    public string ReplyInstruction() => PreviousInstructions.Contains(VoiceReplyInstruction)
+        ? Language == L.English ? EnglishInstruction : TurkishInstruction
+        : VoiceReplyInstruction;
 
     public string ActiveVoice => Language == L.English ? PiperVoiceEnglish : PiperVoice;
 
@@ -96,6 +102,12 @@ public sealed class OoshakConfig
 
     /// <summary>Stops listening and reading while a game or video fills the screen.</summary>
     public bool AutoPauseFullscreen { get; set; } = true;
+
+    /// <summary>Says "on it" out loud when a message went through, instead of only beeping.</summary>
+    public bool SpokenAcknowledgements { get; set; } = true;
+
+    /// <summary>Reads permission requests and questions aloud so they can be answered by voice.</summary>
+    public bool AnnounceRequests { get; set; } = true;
 
     /// <summary>Shows permission requests in a popup instead of only in the Claude window.</summary>
     public bool PermissionPopup { get; set; } = true;

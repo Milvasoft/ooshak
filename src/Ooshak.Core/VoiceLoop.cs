@@ -35,6 +35,9 @@ public sealed class VoiceLoop : IDisposable
     private static readonly TimeSpan SpeakingNoteLifetime = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan ShutdownWait = TimeSpan.FromSeconds(3);
     private static readonly TimeSpan OutboxLifetime = TimeSpan.FromMinutes(10);
+    private static readonly TimeSpan DecisionWindow = TimeSpan.FromSeconds(15);
+    private static readonly TimeSpan DecisionAnnounceLimit = TimeSpan.FromSeconds(45);
+    private const int MaxStatusItems = 3;
     private static readonly TimeSpan OutboxRetryInterval = TimeSpan.FromSeconds(5);
     private static readonly TimeSpan OutboxSettle = TimeSpan.FromMilliseconds(600);
 
@@ -49,6 +52,9 @@ public sealed class VoiceLoop : IDisposable
     private readonly ConcurrentQueue<PendingMessage> _outbox = new();
     private readonly SemaphoreSlim _outboxSignal = new(0);
     private readonly Lock _deliverGate = new();
+    private DateTimeOffset _decisionUntil = DateTimeOffset.MinValue;
+    private volatile bool _decisionArmed;
+    private string? _lastAckTitle;
     private Task _outboxTask = Task.CompletedTask;
     private readonly VoiceRouter _router;
     private readonly IClaudeDesktop _claude = ClaudeDesktop.Open();
@@ -266,6 +272,9 @@ public sealed class VoiceLoop : IDisposable
         if (DateTimeOffset.UtcNow < _lastSpoken.Until && EchoGuard.IsEcho(text, _lastSpoken.Text))
             return;
 
+        if (TryDecide(text, overSpeech || _speaker.IsSpeaking))
+            return;
+
         switch (_router.Route(text, overSpeech || _speaker.IsSpeaking, _speaker.IsPaused))
         {
             case RouteResult.StopSpeaking:
@@ -287,7 +296,11 @@ public sealed class VoiceLoop : IDisposable
             case RouteResult.SwitchTo target:
                 _log.Add(L.T("Hedef: {0}", target.Title));
                 ShowNote(target.Title, NoteLifetime);
-                _speaker.Beep();
+                _lastAckTitle = target.Title;
+                Acknowledge(L.T("Tamam, {0}.", SpokenName(target.Title)));
+                break;
+            case RouteResult.Status:
+                Speak(StatusReport());
                 break;
             case RouteResult.SetAddress address:
                 SetAddress(address.Name);
@@ -331,7 +344,11 @@ public sealed class VoiceLoop : IDisposable
         if (status == DeliveryStatus.Sent)
         {
             ShowNote(L.T("{0}: gönderildi", send.Title), NoteLifetime);
-            _speaker.Beep();
+
+            // Naming the session only when it changed keeps a running conversation quick.
+            var changed = _lastAckTitle != send.Title;
+            _lastAckTitle = send.Title;
+            Acknowledge(changed ? L.T("Tamam, {0} hallediyor.", SpokenName(send.Title)) : L.T("Tamam."));
             return;
         }
 
@@ -442,7 +459,8 @@ public sealed class VoiceLoop : IDisposable
         if (status == DeliveryStatus.Sent)
         {
             ShowNote(L.T("{0}: iletildi", send.Title), NoteLifetime);
-            _speaker.Beep();
+            _lastAckTitle = send.Title;
+            Acknowledge(L.T("{0} boşaldı, ilettim.", SpokenName(send.Title)));
         }
         else if (IsTransient(status))
         {
@@ -486,7 +504,9 @@ public sealed class VoiceLoop : IDisposable
         {
             asked = r;
             _board?.OnPermission(payload, r);
+            Announce(r, title, tool);
         }, questions);
+        _decisionUntil = DateTimeOffset.MinValue;
         _board?.Answered(sessionId, allowed);
 
         if (questions.Count > 0)
@@ -581,6 +601,14 @@ public sealed class VoiceLoop : IDisposable
         Volatile.Write(ref _speechEndedTicks, DateTimeOffset.UtcNow.UtcTicks);
         _lastSpoken.Until = DateTimeOffset.UtcNow + EchoMemory;
 
+        // A question just read out may be answered without the wake name for a short while.
+        if (_decisionArmed)
+        {
+            _decisionArmed = false;
+            _decisionUntil = DateTimeOffset.UtcNow + DecisionWindow;
+            ShowNote(L.T("Cevabını dinliyorum"), DecisionWindow);
+        }
+
         if (!_followUpArmed)
             return;
 
@@ -622,6 +650,121 @@ public sealed class VoiceLoop : IDisposable
         L.IsEnglish ? text : SpeechLexicon.Apply(text, pronunciations);
 
     private void ShowNote(string text, TimeSpan lifetime) => _note = (text, DateTimeOffset.UtcNow + lifetime);
+
+    /// <summary>A short spoken "on it", or the old beep when spoken acknowledgements are off.</summary>
+    private void Acknowledge(string text)
+    {
+        if (_config.SpokenAcknowledgements)
+            Speak(text);
+        else
+            _speaker.Beep();
+    }
+
+    /// <summary>Reads out a permission request or a question so it can be answered by voice.</summary>
+    private void Announce(PermissionRequest request, string title, string tool)
+    {
+        if (!_config.AnnounceRequests || _muted || _autoPaused)
+            return;
+
+        var name = SpokenName(title);
+        string text;
+        if (!request.IsQuestion)
+        {
+            text = L.T("{0} {1} için izin istiyor. Onaylıyor musun?", name, ActionName(tool));
+        }
+        else if (request.Questions is [{ MultiSelect: false } question])
+        {
+            var options = question.Options.Select(o => o.Label).ToList();
+            var choices = options.Count == 1 ? options[0] : $"{string.Join(", ", options[..^1])} {L.T("ya da")} {options[^1]}";
+            text = L.T("{0} soruyor: {1}? {2}?", name, question.Question.TrimEnd('?', ' '), choices);
+        }
+        else
+        {
+            Speak(L.T("{0} birkaç soru sordu, cevapları ekranda.", name));
+            return;
+        }
+
+        _decisionArmed = true;
+        _decisionUntil = DateTimeOffset.UtcNow + DecisionAnnounceLimit;
+        Speak(text);
+    }
+
+    private static string ActionName(string tool) => L.T(tool switch
+    {
+        "Bash" or "PowerShell" => "bir komut çalıştırmak",
+        "Edit" or "Write" or "MultiEdit" or "NotebookEdit" => "bir dosyayı değiştirmek",
+        "WebFetch" or "WebSearch" => "internete erişmek",
+        _ => "bir araç kullanmak",
+    });
+
+    /// <summary>
+    /// Answers the open request from speech: right after it was read out with no wake name needed,
+    /// or later when the sentence starts with the wake name.
+    /// </summary>
+    private bool TryDecide(string text, bool overSpeech)
+    {
+        var request = _permissions.Current;
+        if (request is null)
+            return false;
+
+        // Speech that began while Ooshak talked may be its own voice; only the wake name vouches for it.
+        var addressed = text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Take(3)
+            .Any(t => _config.WakeNames.Any(w => VoiceRouter.Key(w) == VoiceRouter.Key(t)));
+        if (!addressed && (overSpeech || DateTimeOffset.UtcNow >= _decisionUntil))
+            return false;
+
+        var english = _config.Language == L.English;
+        if (request.IsQuestion)
+        {
+            if (request.Questions is not [{ MultiSelect: false } question]
+                || VoiceDecisions.Option(text, question, _config.WakeNames, english) is not { } label)
+                return false;
+
+            _decisionUntil = DateTimeOffset.MinValue;
+            _log.Add(L.T("Sesle cevap · “{0}” · {1}", text, label));
+            _permissions.AnswerQuestions(request, new Dictionary<string, string> { [question.Question] = label });
+            Speak(L.T("Tamam, {0}.", label));
+            return true;
+        }
+
+        if (VoiceDecisions.Approval(text, _config.WakeNames, english) is not { } allow)
+            return false;
+
+        _decisionUntil = DateTimeOffset.MinValue;
+        _log.Add(L.T("Sesle karar · “{0}” · {1}", text, allow ? L.T("izin") : L.T("ret")));
+        _permissions.Decide(request, allow);
+        Speak(L.T(allow ? "Onayladım." : "Reddettim."));
+        return true;
+    }
+
+    /// <summary>One or two sentences on who needs the user and who is still working.</summary>
+    private string StatusReport()
+    {
+        var items = _board?.Items ?? [];
+        var working = _awaitingReply.Values.Distinct().Where(t => items.All(i => i.Title != t)).ToList();
+
+        if (items.Count == 0 && working.Count == 0)
+            return L.T("Her şey sakin, seni bekleyen oturum yok.");
+
+        var parts = items.Take(MaxStatusItems).Select(i => L.T(i.Kind switch
+        {
+            WaitKind.Permission => "{0} izin istiyor",
+            WaitKind.Question => "{0} soru soruyor",
+            _ => "{0} bitti",
+        }, SpokenName(i.Title))).ToList();
+
+        if (items.Count > MaxStatusItems)
+            parts.Add(L.T("{0} oturum daha", items.Count - MaxStatusItems));
+
+        var report = parts.Count > 0 ? string.Join(", ", parts) + "." : "";
+        if (working.Count > 0)
+        {
+            var names = string.Join(", ", working.Take(MaxStatusItems).Select(SpokenName));
+            report += " " + L.T("{0} hâlâ çalışıyor.", names);
+        }
+
+        return report.Trim();
+    }
 
     private void Speak(string text)
     {
