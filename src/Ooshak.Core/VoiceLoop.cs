@@ -14,6 +14,9 @@ public enum VoiceState
     Paused,
 }
 
+/// <summary>A spoken message waiting for its session to be free.</summary>
+internal sealed record PendingMessage(RouteResult.Send Send, string? SessionId, DateTimeOffset Until);
+
 public sealed record VoiceSnapshot(VoiceState State, float Level, string? Note, string? Target, string? LastCommand, int AwaitingReplies);
 
 /// <summary>Wires microphone, transcription, routing, delivery and spoken replies together.</summary>
@@ -31,6 +34,9 @@ public sealed class VoiceLoop : IDisposable
     private static readonly TimeSpan NoteLifetime = TimeSpan.FromSeconds(4);
     private static readonly TimeSpan SpeakingNoteLifetime = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan ShutdownWait = TimeSpan.FromSeconds(3);
+    private static readonly TimeSpan OutboxLifetime = TimeSpan.FromMinutes(10);
+    private static readonly TimeSpan OutboxRetryInterval = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan OutboxSettle = TimeSpan.FromMilliseconds(600);
 
     private readonly OoshakConfig _config;
     private readonly LogBook _log;
@@ -40,6 +46,10 @@ public sealed class VoiceLoop : IDisposable
     private readonly ConcurrentDictionary<string, string> _awaitingReply = new();
     private readonly ConcurrentDictionary<string, byte> _instructed = new();
     private readonly CancellationTokenSource _shutdown = new();
+    private readonly ConcurrentQueue<PendingMessage> _outbox = new();
+    private readonly SemaphoreSlim _outboxSignal = new(0);
+    private readonly Lock _deliverGate = new();
+    private Task _outboxTask = Task.CompletedTask;
     private readonly VoiceRouter _router;
     private readonly IClaudeDesktop _claude = ClaudeDesktop.Open();
     private readonly Transcriber _transcriber;
@@ -109,6 +119,9 @@ public sealed class VoiceLoop : IDisposable
         _listener.Start();
         _processing = Task.Run(ProcessAsync);
         _speechWatch = Task.Run(WatchForCommandsWhileSpeakingAsync);
+        _outboxTask = Task.Run(DrainOutboxAsync);
+        if (_board is not null)
+            _board.Changed += WakeOutbox;
     }
 
     public VoiceSnapshot Snapshot()
@@ -300,12 +313,50 @@ public sealed class VoiceLoop : IDisposable
 
     private void Deliver(RouteResult.Send send)
     {
-        _working = true;
         _lastCommand = send.Text;
         ShowNote(send.Title, NoteLifetime);
 
         var session = SessionCatalog.Load().FirstOrDefault(s => s.Title == send.Title);
 
+        // A session waiting on a permission or question shows that dialog instead of its prompt.
+        if (session is not null && IsBlocked(session.CliSessionId) is { } kind)
+        {
+            Hold(send, session, kind == WaitKind.Question
+                ? L.T("{0} senden cevap bekliyor, cevaplayınca iletirim.", SpokenName(send.Title))
+                : L.T("{0} izin bekliyor, onaylayınca iletirim.", SpokenName(send.Title)));
+            return;
+        }
+
+        var status = TryDeliver(send, session);
+        if (status == DeliveryStatus.Sent)
+        {
+            ShowNote(L.T("{0}: gönderildi", send.Title), NoteLifetime);
+            _speaker.Beep();
+            return;
+        }
+
+        if (IsTransient(status))
+        {
+            Hold(send, session, status == DeliveryStatus.UserIsTyping
+                ? L.T("Yazıyorsun, bitirince {0} oturumuna iletirim.", SpokenName(send.Title))
+                : L.T("{0} şu an meşgul, boşalınca iletirim.", SpokenName(send.Title)));
+            return;
+        }
+
+        ShowNote(Describe(status), NoteLifetime);
+        Speak(Describe(status));
+    }
+
+    // The outbox and live speech both drive the same window, one delivery at a time.
+    private DeliveryStatus TryDeliver(RouteResult.Send send, SessionInfo? session)
+    {
+        lock (_deliverGate)
+            return TryDeliverNow(send, session);
+    }
+
+    private DeliveryStatus TryDeliverNow(RouteResult.Send send, SessionInfo? session)
+    {
+        _working = true;
         DeliveryStatus status;
         try
         {
@@ -321,18 +372,86 @@ public sealed class VoiceLoop : IDisposable
         if (status != DeliveryStatus.Sent && session is not null)
             _instructed.TryRemove(session.CliSessionId, out _);
 
-        if (status == DeliveryStatus.Sent)
-        {
-            if (session is not null)
-                _awaitingReply[session.CliSessionId] = send.Title;
+        if (status == DeliveryStatus.Sent && session is not null)
+            _awaitingReply[session.CliSessionId] = send.Title;
 
-            ShowNote(L.T("{0}: gönderildi", send.Title), NoteLifetime);
-            _speaker.Beep();
+        return status;
+    }
+
+    // These clear up by themselves: the session finishes a step, the user stops typing, the app redraws.
+    private static bool IsTransient(DeliveryStatus status) => status is DeliveryStatus.NoSendButton
+        or DeliveryStatus.PromptNotFound or DeliveryStatus.SwitchTimedOut or DeliveryStatus.NotConfirmed
+        or DeliveryStatus.UserIsTyping;
+
+    private WaitKind? IsBlocked(string sessionId) =>
+        _board?.Items.FirstOrDefault(i => i.SessionId == sessionId && i.Kind is WaitKind.Permission or WaitKind.Question)?.Kind;
+
+    /// <summary>Keeps a message that could not go yet and says why, once, in one short sentence.</summary>
+    private void Hold(RouteResult.Send send, SessionInfo? session, string reason)
+    {
+        _outbox.Enqueue(new PendingMessage(send, session?.CliSessionId, DateTimeOffset.UtcNow + OutboxLifetime));
+        _log.Add(L.T("Sıraya alındı · {0} · {1}", send.Title, send.Text));
+        ShowNote(reason, NoteLifetime);
+        Speak(reason);
+        _outboxSignal.Release();
+    }
+
+    /// <summary>Tries held messages again whenever a session moves on, and every few seconds anyway.</summary>
+    private async Task DrainOutboxAsync()
+    {
+        try
+        {
+            while (true)
+            {
+                await _outboxSignal.WaitAsync(OutboxRetryInterval, _shutdown.Token);
+                if (_outbox.IsEmpty)
+                    continue;
+
+                // Let the app finish redrawing after the event that woke us.
+                await Task.Delay(OutboxSettle, _shutdown.Token);
+                var waiting = _outbox.Count;
+                for (var i = 0; i < waiting && _outbox.TryDequeue(out var pending); i++)
+                    RetryHeld(pending);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Shutting down.
+        }
+    }
+
+    private void RetryHeld(PendingMessage pending)
+    {
+        var send = pending.Send;
+        if (DateTimeOffset.UtcNow > pending.Until)
+        {
+            _log.Add(L.T("Vazgeçildi · {0} · {1}", send.Title, send.Text));
+            Speak(L.T("{0} oturumuna iletemedim, uzun süre boşalmadı.", SpokenName(send.Title)));
             return;
         }
 
-        ShowNote(Describe(status), NoteLifetime);
-        Speak(Describe(status));
+        var blocked = pending.SessionId is { } id && IsBlocked(id) is not null;
+        if (blocked || _listener.InSpeech || _speaker.IsSpeaking)
+        {
+            _outbox.Enqueue(pending);
+            return;
+        }
+
+        var session = SessionCatalog.Load().FirstOrDefault(s => s.Title == send.Title);
+        var status = TryDeliver(send, session);
+        if (status == DeliveryStatus.Sent)
+        {
+            ShowNote(L.T("{0}: iletildi", send.Title), NoteLifetime);
+            _speaker.Beep();
+        }
+        else if (IsTransient(status))
+        {
+            _outbox.Enqueue(pending);
+        }
+        else
+        {
+            Speak(Describe(status));
+        }
     }
 
     private static string Describe(DeliveryStatus status) => status switch
@@ -351,16 +470,33 @@ public sealed class VoiceLoop : IDisposable
         var sessionId = payload.TryGetProperty("session_id", out var id) ? id.GetString() ?? "" : "";
         var title = SessionCatalog.Load().FirstOrDefault(s => s.CliSessionId == sessionId)?.Title;
 
-        if (!_config.PermissionPopup || title is null || PermissionText.NeedsTheApp(tool))
+        var input = payload.TryGetProperty("tool_input", out var value) ? value : default;
+        var questions = tool == PermissionText.QuestionTool ? PermissionText.Questions(input) : [];
+        var answerable = questions.Count > 0 || !PermissionText.NeedsTheApp(tool);
+
+        if (!_config.PermissionPopup || title is null || !answerable)
         {
             _board?.OnPermission(payload, null);
             return null;
         }
 
-        var input = payload.TryGetProperty("tool_input", out var value) ? value : default;
-        var detail = PermissionText.Detail(tool, input);
-        var allowed = await _permissions.AskAsync(SpokenName(title), detail, PermissionTimeout, r => _board?.OnPermission(payload, r));
+        var detail = questions.Count > 0 ? string.Join("\n", questions.Select(q => q.Question)) : PermissionText.Detail(tool, input);
+        PermissionRequest? asked = null;
+        var allowed = await _permissions.AskAsync(SpokenName(title), detail, PermissionTimeout, r =>
+        {
+            asked = r;
+            _board?.OnPermission(payload, r);
+        }, questions);
         _board?.Answered(sessionId, allowed);
+
+        if (questions.Count > 0)
+        {
+            var answers = asked?.Answers;
+            _log.Add(answers is null
+                ? L.T("Soru Claude'a bırakıldı · {0}", title)
+                : L.T("Soru cevaplandı · {0} · {1}", title, string.Join(" · ", answers.Values)));
+            return answers is null ? null : PermissionText.AnswerReply(input, answers);
+        }
 
         _log.Add(L.T(allowed switch
         {
@@ -372,9 +508,16 @@ public sealed class VoiceLoop : IDisposable
         return allowed is { } allow ? PermissionText.Reply(allow, L.T("Kullanıcı reddetti.")) : null;
     }
 
+    private void WakeOutbox()
+    {
+        if (!_outbox.IsEmpty)
+            _outboxSignal.Release();
+    }
+
     private void OnHook(string route, JsonElement payload)
     {
         _board?.OnHook(route, payload);
+        WakeOutbox();
         var sessionId = payload.TryGetProperty("session_id", out var id) ? id.GetString() ?? "" : "";
 
         var voiceStarted = _awaitingReply.TryGetValue(sessionId, out var title);
@@ -512,10 +655,12 @@ public sealed class VoiceLoop : IDisposable
     public void Dispose()
     {
         _shutdown.Cancel();
+        if (_board is not null)
+            _board.Changed -= WakeOutbox;
         _listener.Dispose();
         _hooks.Dispose();
         _speaker.Dispose();
-        Task.WaitAll([_processing, _speechWatch], ShutdownWait);
+        Task.WaitAll([_processing, _speechWatch, _outboxTask], ShutdownWait);
         _vad.Dispose();
         _transcriber.Dispose();
         _claude.Dispose();

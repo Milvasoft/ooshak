@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
@@ -64,8 +64,14 @@ public partial class PermissionWindow : Window
             return;
 
         _shown = current;
-        TitleText.Text = L.T("{0} izin istiyor", current.Session);
+        TitleText.Text = L.T(current.IsQuestion ? "{0} soru soruyor" : "{0} izin istiyor", current.Session);
         DetailText.Text = current.Detail;
+        DetailBox.Visibility = current.IsQuestion ? Visibility.Collapsed : Visibility.Visible;
+        PermissionButtons.Visibility = current.IsQuestion ? Visibility.Collapsed : Visibility.Visible;
+        QuestionHost.Visibility = current.IsQuestion ? Visibility.Visible : Visibility.Collapsed;
+        QuestionHost.Content = current.IsQuestion
+            ? QuestionPicker.Build(this, current, _broker, "DenyPill", "AllowPill", showQuestionText: true)
+            : null;
         Arm(false);
         _armTimer.Stop();
         _armTimer.Start();
@@ -81,6 +87,7 @@ public partial class PermissionWindow : Window
         _armTimer.Stop();
         DenyButton.IsEnabled = enabled;
         AllowButton.IsEnabled = enabled;
+        QuestionHost.IsEnabled = enabled;
     }
 
     private void PlaceOnScreen()

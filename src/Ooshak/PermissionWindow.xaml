@@ -1,4 +1,4 @@
-<Window x:Class="Ooshak.PermissionWindow"
+﻿<Window x:Class="Ooshak.PermissionWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:Ooshak"
@@ -78,14 +78,16 @@
                 <TextBlock x:Name="WaitingText" Grid.Column="2" VerticalAlignment="Center" Style="{StaticResource Eyebrow}" />
             </Grid>
 
-            <Border Margin="0,14,0,16" Padding="12,10" CornerRadius="9" Background="#0F0D0A">
+            <Border x:Name="DetailBox" Margin="0,14,0,16" Padding="12,10" CornerRadius="9" Background="#0F0D0A">
                 <ScrollViewer MaxHeight="150" VerticalScrollBarVisibility="Auto" Focusable="False">
                     <TextBlock x:Name="DetailText" FontFamily="{StaticResource MonoFont}" FontSize="13"
                                Foreground="{StaticResource Paper}" TextWrapping="Wrap" />
                 </ScrollViewer>
             </Border>
 
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+            <ContentControl x:Name="QuestionHost" Margin="0,14,0,0" Focusable="False" Visibility="Collapsed" />
+
+            <StackPanel x:Name="PermissionButtons" Orientation="Horizontal" HorizontalAlignment="Right">
                 <Button x:Name="DenyButton" Style="{StaticResource DenyPill}" Content="{local:T 'Reddet'}" Click="OnDeny" />
                 <Button x:Name="AllowButton" Style="{StaticResource AllowPill}" Margin="8,0,0,0" Content="{local:T 'İzin ver'}" Click="OnAllow" />
             </StackPanel>

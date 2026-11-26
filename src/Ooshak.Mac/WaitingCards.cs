@@ -95,8 +95,12 @@ public sealed class WaitingCards(TopLevelProvider topLevel, SessionBoard board, 
             });
         }
 
+        // The question is already the card's text, so only its options are added.
+        if (item.Request is { IsQuestion: true } asked)
+            content.Children.Add(QuestionPicker.Build(asked, permissions, showQuestionText: asked.Questions.Count > 1));
+
         var actions = new WrapPanel { Margin = new Thickness(0, 8, 0, 0) };
-        if (item.Request is { } request)
+        if (item.Request is { IsQuestion: false } request)
         {
             actions.Children.Add(Action(L.T("İzin ver"), primary: true, () => permissions.Decide(request, allow: true)));
             actions.Children.Add(Action(L.T("Reddet"), primary: false, () => permissions.Decide(request, allow: false)));
@@ -104,19 +108,24 @@ public sealed class WaitingCards(TopLevelProvider topLevel, SessionBoard board, 
 
         if (item.LocalId is { } localId)
             actions.Children.Add(Action(L.T("Aç"), primary: item.Request is null, () => MacController.Open(ClaudeDesktop.SessionLink(localId))));
+        else
+            actions.Children.Add(Action(L.T("Komutu kopyala"), primary: false, () => _ = CopyAsync(item.ResumeCommand)));
 
-        actions.Children.Add(Action(L.T("Komutu kopyala"), primary: false, () => _ = CopyAsync(item.ResumeCommand)));
         actions.Children.Add(Action(L.T("Kaldır"), primary: false, () => board.Dismiss(item.SessionId)));
         content.Children.Add(actions);
 
-        content.Children.Add(new TextBlock
+        // A terminal session cannot be opened from here; its resume command is the way back.
+        if (!item.InApp)
         {
-            Text = item.InApp ? item.ResumeCommand : $"{L.T("Terminal oturumu")} · {item.ResumeCommand}",
-            FontFamily = Mono,
-            FontSize = 11,
-            Foreground = Ui.Muted,
-            TextTrimming = TextTrimming.CharacterEllipsis,
-        });
+            content.Children.Add(new TextBlock
+            {
+                Text = $"{L.T("Terminal oturumu")} · {item.ResumeCommand}",
+                FontFamily = Mono,
+                FontSize = 11,
+                Foreground = Ui.Muted,
+                TextTrimming = TextTrimming.CharacterEllipsis,
+            });
+        }
 
         var strip = new Border { Width = 3, Background = accent, CornerRadius = new CornerRadius(2), Margin = new Thickness(0, 2, 14, 2) };
         var row = new DockPanel();

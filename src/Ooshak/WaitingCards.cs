@@ -100,15 +100,28 @@ public sealed class WaitingCards(FrameworkElement resources, SessionBoard board,
             content.Children.Add(detail);
         }
 
-        content.Children.Add(Actions(item));
-        content.Children.Add(new TextBlock
+        // The question is already the card's text, so only its options are added.
+        if (item.Request is { IsQuestion: true } asked)
         {
-            Text = item.InApp ? item.ResumeCommand : $"{L.T("Terminal oturumu")} · {item.ResumeCommand}",
-            Margin = new Thickness(0, 8, 0, 0),
-            Style = StyleOf("Eyebrow"),
-            FontFamily = Resource<FontFamily>("MonoFont"),
-            TextTrimming = TextTrimming.CharacterEllipsis,
-        });
+            var picker = QuestionPicker.Build(resources, asked, permissions, "GhostAction", "PrimaryAction", showQuestionText: asked.Questions.Count > 1);
+            picker.Margin = new Thickness(0, 12, 0, 0);
+            content.Children.Add(picker);
+        }
+
+        content.Children.Add(Actions(item));
+
+        // A terminal session cannot be opened from here; its resume command is the way back.
+        if (!item.InApp)
+        {
+            content.Children.Add(new TextBlock
+            {
+                Text = $"{L.T("Terminal oturumu")} · {item.ResumeCommand}",
+                Margin = new Thickness(0, 8, 0, 0),
+                Style = StyleOf("Eyebrow"),
+                FontFamily = Resource<FontFamily>("MonoFont"),
+                TextTrimming = TextTrimming.CharacterEllipsis,
+            });
+        }
 
         var strip = new Border { Width = AccentWidth, Background = accent, CornerRadius = new CornerRadius(2), Margin = new Thickness(0, 2, 14, 2) };
         var row = new DockPanel { LastChildFill = true };
@@ -123,7 +136,7 @@ public sealed class WaitingCards(FrameworkElement resources, SessionBoard board,
     {
         var actions = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 12, 0, 0) };
 
-        if (item.Request is { } request)
+        if (item.Request is { IsQuestion: false } request)
         {
             actions.Children.Add(MakeButton(L.T("İzin ver"), "PrimaryAction", () => permissions.Decide(request, allow: true)));
             actions.Children.Add(MakeButton(L.T("Reddet"), "GhostAction", () => permissions.Decide(request, allow: false)));
@@ -131,8 +144,9 @@ public sealed class WaitingCards(FrameworkElement resources, SessionBoard board,
 
         if (item.LocalId is { } localId)
             actions.Children.Add(MakeButton(L.T("Aç"), item.Request is null ? "PrimaryAction" : "GhostAction", () => Open(localId)));
+        else
+            actions.Children.Add(MakeButton(L.T("Komutu kopyala"), "GhostAction", () => Copy(item.ResumeCommand)));
 
-        actions.Children.Add(MakeButton(L.T("Komutu kopyala"), "GhostAction", () => Copy(item.ResumeCommand)));
         actions.Children.Add(MakeButton(L.T("Kaldır"), "GhostAction", () => board.Dismiss(item.SessionId)));
         return actions;
     }

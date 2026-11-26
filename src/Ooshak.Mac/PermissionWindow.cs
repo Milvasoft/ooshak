@@ -30,6 +30,14 @@ public sealed class PermissionWindow : Window
     private readonly TextBlock _waiting = Ui.Note("");
     private readonly Button _allow = new() { Content = L.T("İzin ver"), IsEnabled = false };
     private readonly Button _deny = new() { Content = L.T("Reddet"), IsEnabled = false };
+    private readonly ContentControl _questionHost = new() { IsVisible = false };
+    private readonly StackPanel _permissionButtons = new()
+    {
+        Orientation = Orientation.Horizontal,
+        HorizontalAlignment = HorizontalAlignment.Right,
+        Spacing = 8,
+    };
+    private readonly ScrollViewer _detailBox = new() { MaxHeight = 220 };
     private PermissionRequest? _shown;
     private bool _retired;
 
@@ -46,6 +54,8 @@ public sealed class PermissionWindow : Window
         SystemDecorations = SystemDecorations.BorderOnly;
         Background = Ui.Card;
 
+        _detailBox.Content = _detail;
+        _permissionButtons.Children.AddRange([_deny, _allow]);
         _allow.Click += (_, _) => Answer(true);
         _deny.Click += (_, _) => Answer(false);
 
@@ -56,15 +66,10 @@ public sealed class PermissionWindow : Window
             Children =
             {
                 _heading,
-                new ScrollViewer { Content = _detail, MaxHeight = 220 },
+                _detailBox,
+                _questionHost,
                 _waiting,
-                new StackPanel
-                {
-                    Orientation = Orientation.Horizontal,
-                    HorizontalAlignment = HorizontalAlignment.Right,
-                    Spacing = 8,
-                    Children = { _deny, _allow },
-                },
+                _permissionButtons,
             },
         };
 
@@ -111,8 +116,12 @@ public sealed class PermissionWindow : Window
             return;
 
         _shown = current;
-        _heading.Text = L.T("{0} izin istiyor", current.Session);
+        _heading.Text = L.T(current.IsQuestion ? "{0} soru soruyor" : "{0} izin istiyor", current.Session);
         _detail.Text = current.Detail;
+        _detailBox.IsVisible = !current.IsQuestion;
+        _permissionButtons.IsVisible = !current.IsQuestion;
+        _questionHost.IsVisible = current.IsQuestion;
+        _questionHost.Content = current.IsQuestion ? QuestionPicker.Build(current, _broker, showQuestionText: true) : null;
         Arm(false);
         _armTimer.Stop();
         _armTimer.Start();
@@ -127,6 +136,7 @@ public sealed class PermissionWindow : Window
         _armTimer.Stop();
         _allow.IsEnabled = armed;
         _deny.IsEnabled = armed;
+        _questionHost.IsEnabled = armed;
     }
 
     private void Answer(bool allow)

@@ -6,7 +6,9 @@ All notable changes to Ooshak are listed here. The format follows [Keep a Change
 
 ### Added
 
-- A **Waiting** page lists every Claude Code session that needs you, grouped by project: permission requests with Allow and Deny right on the card, questions a session asked, and sessions that finished and wait for your next message. Cards show how long they have waited, open the session in the Claude app, copy its `claude --resume` command, and go away by themselves when the session gets back to work. Terminal sessions are listed too. The tray and menu bar menus open the page directly.
+- A **Waiting** page lists every Claude Code session that needs you, grouped by project: permission requests with Allow and Deny right on the card, questions a session asked, and sessions that finished and wait for your next message. Cards show how long they have waited, open the session in the Claude app (a terminal session offers its `claude --resume` command instead), and go away by themselves when the session gets back to work. Terminal sessions are listed too. The tray and menu bar menus open the page directly.
+- Questions a session asks (AskUserQuestion) show their options as buttons, in the popup and on the card. One click answers a single question; several questions or multiple choice are picked and sent with Answer. "Answer in Claude" leaves the question to Claude's own window.
+- A message for a busy session is no longer dropped with "I couldn't send the message". If the session is working, waiting for a permission or a question, or you are typing, Ooshak says so in one sentence, keeps the message and delivers it as soon as the session is free, for up to ten minutes.
 - Ooshak now also listens to the `UserPromptSubmit`, `PostToolUse` and `SessionEnd` hooks to know when a session is working again. An existing connection is updated on the next start.
 
 ## [0.2.0] - 2026-11-19

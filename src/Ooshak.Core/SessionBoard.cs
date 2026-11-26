@@ -128,8 +128,8 @@ public sealed class SessionBoard
         var tool = Text(payload, "tool_name");
         var input = payload.TryGetProperty("tool_input", out var value) ? value : default;
 
-        if (tool == "AskUserQuestion")
-            Put(payload, WaitKind.Question, Question(input) ?? tool, tool);
+        if (tool == PermissionText.QuestionTool)
+            Put(payload, WaitKind.Question, Question(input) ?? tool, tool, request);
         else if (tool == "ExitPlanMode")
             Put(payload, WaitKind.Question, L.T("Planı onaylamanı bekliyor."), tool);
         else
@@ -144,7 +144,7 @@ public sealed class SessionBoard
     {
         if (answer is not null)
         {
-            RemoveIf(sessionId, item => item.Kind == WaitKind.Permission);
+            RemoveIf(sessionId, item => item.Kind is WaitKind.Permission || item.Request is not null);
             return;
         }
 
